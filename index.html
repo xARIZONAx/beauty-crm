@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BeautyRecall CRM — demo</title>
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+  <header>
+    <section class="hero">
+      <div class="brand">
+        <h1>BeautyRecall CRM</h1>
+        <p>Prosty CRM dla gabinetu beauty: klientki, zabiegi, przypomnienia i gotowe wiadomości WhatsApp/SMS.</p>
+      </div>
+      <div class="hero-actions">
+        <button onclick="openClientModal()">+ Dodaj klientkę</button>
+        <button class="secondary" onclick="exportData()">Eksport danych</button>
+        <label class="button secondary" for="importFile">Import danych</label>
+        <input id="importFile" type="file" accept="application/json" style="display:none" onchange="importData(event)" />
+      </div>
+    </section>
+  </header>
+
+  <main>
+    <div class="notice">
+      To jest wersja demonstracyjna. Dane zapisują się tylko w tej przeglądarce przez localStorage. Do wersji produkcyjnej potrzebne są: logowanie, baza danych, RODO, szyfrowanie i kopie zapasowe.
+    </div>
+
+    <section class="cards">
+      <div class="stat"><strong id="statClients">0</strong><span>klientek w bazie</span></div>
+      <div class="stat"><strong id="statTreatments">0</strong><span>zabiegów zapisanych</span></div>
+      <div class="stat"><strong id="statToday">0</strong><span>kontaktów na dziś</span></div>
+      <div class="stat"><strong id="statPending">0</strong><span>aktywnych przypomnień</span></div>
+    </section>
+
+    <div class="tabs">
+      <button class="tab active" data-view="dashboard" onclick="setView('dashboard')">Dashboard</button>
+      <button class="tab" data-view="clients" onclick="setView('clients')">Klientki</button>
+      <button class="tab" data-view="reminders" onclick="setView('reminders')">Przypomnienia</button>
+      <button class="tab" data-view="templates" onclick="setView('templates')">Szablony</button>
+    </div>
+
+    <section id="view-dashboard" class="view active">
+      <div class="grid">
+        <aside class="panel">
+          <h2>Klientki</h2>
+          <p class="panel-subtitle">Kliknij klientkę, żeby zobaczyć kartę, zabiegi i przypomnienia.</p>
+          <input class="search" id="clientSearch" placeholder="Szukaj po imieniu, telefonie, e-mailu..." oninput="renderAll()" />
+          <div id="clientList" class="client-list"></div>
+        </aside>
+        <section class="panel"><div id="clientDetails"></div></section>
+      </div>
+    </section>
+
+    <section id="view-clients" class="view">
+      <div class="panel">
+        <h2>Lista klientek</h2>
+        <p class="panel-subtitle">Prosta baza kontaktów gabinetu.</p>
+        <div id="clientsTable"></div>
+      </div>
+    </section>
+
+    <section id="view-reminders" class="view">
+      <div class="panel">
+        <h2>Przypomnienia</h2>
+        <p class="panel-subtitle">Tu widać klientki, do których warto napisać.</p>
+        <div class="actions">
+          <button class="secondary small" onclick="setReminderFilter('all')">Wszystkie</button>
+          <button class="secondary small" onclick="setReminderFilter('today')">Na dziś i zaległe</button>
+          <button class="secondary small" onclick="setReminderFilter('pending')">Aktywne</button>
+          <button class="secondary small" onclick="setReminderFilter('done')">Zrobione</button>
+        </div>
+        <div id="remindersTable" style="margin-top:12px;"></div>
+      </div>
+    </section>
+
+    <section id="view-templates" class="view">
+      <div class="panel">
+        <h2>Szablony wiadomości</h2>
+        <p class="panel-subtitle">Możesz używać zmiennych: {imie}, {zabieg}, {data}, {gabinet}.</p>
+        <div id="templatesList"></div>
+        <div class="actions">
+          <button onclick="openTemplateModal()">+ Dodaj szablon</button>
+          <button class="secondary" onclick="resetTemplates()">Przywróć domyślne</button>
+        </div>
+      </div>
+    </section>
+
+    <p class="footer-note">Demo: brak logowania, brak serwera, brak automatycznych SMS-ów. Dobre jako makieta do pokazania pierwszym gabinetom.</p>
+  </main>
+
+  <div id="clientModal" class="modal-backdrop" onclick="closeOnBackdrop(event, 'clientModal')">
+    <div class="modal">
+      <div class="modal-header">
+        <div><h2 id="clientModalTitle">Dodaj klientkę</h2><p class="panel-subtitle">Wpisz dane kontaktowe i notatki.</p></div>
+        <button class="ghost small" onclick="closeClientModal()">Zamknij</button>
+      </div>
+      <form id="clientForm" onsubmit="saveClient(event)">
+        <input type="hidden" id="clientId" />
+        <div class="row two">
+          <div><label>Imię *</label><input id="firstName" required placeholder="Anna" /></div>
+          <div><label>Nazwisko</label><input id="lastName" placeholder="Kowalska" /></div>
+        </div>
+        <div class="row two">
+          <div><label>Telefon</label><input id="phone" placeholder="500000000" /></div>
+          <div><label>E-mail</label><input id="email" type="email" placeholder="anna@email.pl" /></div>
+        </div>
+        <div class="row two">
+          <div><label>Data urodzenia</label><input id="birthDate" type="date" /></div>
+          <div><label>Zgoda marketingowa</label><select id="marketingConsent"><option value="false">Nie</option><option value="true">Tak</option></select></div>
+        </div>
+        <label>Notatki</label><textarea id="notes" placeholder="np. preferuje kontakt WhatsApp"></textarea>
+        <div class="actions"><button type="submit">Zapisz</button><button type="button" class="secondary" onclick="closeClientModal()">Anuluj</button></div>
+      </form>
+    </div>
+  </div>
+
+  <div id="treatmentModal" class="modal-backdrop" onclick="closeOnBackdrop(event, 'treatmentModal')">
+    <div class="modal">
+      <div class="modal-header">
+        <div><h2>Dodaj zabieg</h2><p class="panel-subtitle">Po zapisaniu możesz od razu utworzyć przypomnienie.</p></div>
+        <button class="ghost small" onclick="closeTreatmentModal()">Zamknij</button>
+      </div>
+      <form id="treatmentForm" onsubmit="saveTreatment(event)">
+        <input type="hidden" id="treatmentClientId" />
+        <div class="row two">
+          <div><label>Zabieg *</label><input id="treatmentName" required placeholder="Botoks / mezoterapia / peeling" /></div>
+          <div><label>Data zabiegu *</label><input id="treatmentDate" type="date" required /></div>
+        </div>
+        <div class="row three">
+          <div><label>Okolica</label><input id="area" placeholder="twarz / czoło / szyja" /></div>
+          <div><label>Preparat</label><input id="productUsed" placeholder="nazwa preparatu" /></div>
+          <div><label>Cena</label><input id="price" type="number" min="0" step="1" placeholder="900" /></div>
+        </div>
+        <label>Notatka po zabiegu</label><textarea id="treatmentNotes"></textarea>
+        <h3 style="margin-top:18px;">Przypomnienie</h3>
+        <div class="row two">
+          <div><label>Kiedy przypomnieć?</label><select id="reminderPreset" onchange="updateReminderDate()"><option value="">Nie twórz</option><option value="7">Kontrola za 7 dni</option><option value="14">Kontrola za 14 dni</option><option value="30">Kolejna wizyta za 30 dni</option><option value="90">Za 3 miesiące</option><option value="120">Za 4 miesiące</option><option value="180">Za 6 miesięcy</option><option value="custom">Własna data</option></select></div>
+          <div><label>Data przypomnienia</label><input id="reminderDate" type="date" /></div>
+        </div>
+        <label>Powód przypomnienia</label><input id="reminderReason" placeholder="np. kolejna mezoterapia" />
+        <label>Wiadomość</label><textarea id="reminderMessage"></textarea>
+        <div class="actions"><button type="submit">Zapisz zabieg</button><button type="button" class="secondary" onclick="closeTreatmentModal()">Anuluj</button></div>
+      </form>
+    </div>
+  </div>
+
+  <div id="reminderModal" class="modal-backdrop" onclick="closeOnBackdrop(event, 'reminderModal')">
+    <div class="modal">
+      <div class="modal-header"><div><h2>Dodaj przypomnienie</h2><p class="panel-subtitle">Przypomnienie pojawi się na liście kontaktów.</p></div><button class="ghost small" onclick="closeReminderModal()">Zamknij</button></div>
+      <form id="manualReminderForm" onsubmit="saveManualReminder(event)">
+        <input type="hidden" id="manualReminderClientId" />
+        <div class="row two"><div><label>Data *</label><input id="manualReminderDate" type="date" required /></div><div><label>Powód *</label><input id="manualReminderReason" required /></div></div>
+        <label>Wiadomość</label><textarea id="manualReminderMessage"></textarea>
+        <div class="actions"><button type="submit">Zapisz</button><button type="button" class="secondary" onclick="closeReminderModal()">Anuluj</button></div>
+      </form>
+    </div>
+  </div>
+
+  <div id="templateModal" class="modal-backdrop" onclick="closeOnBackdrop(event, 'templateModal')">
+    <div class="modal">
+      <div class="modal-header"><div><h2 id="templateModalTitle">Dodaj szablon</h2><p class="panel-subtitle">Zmienne: {imie}, {zabieg}, {data}, {gabinet}.</p></div><button class="ghost small" onclick="closeTemplateModal()">Zamknij</button></div>
+      <form id="templateForm" onsubmit="saveTemplate(event)">
+        <input type="hidden" id="templateId" />
+        <label>Nazwa *</label><input id="templateName" required />
+        <label>Treść *</label><textarea id="templateContent" required></textarea>
+        <div class="actions"><button type="submit">Zapisz</button><button type="button" class="secondary" onclick="closeTemplateModal()">Anuluj</button></div>
+      </form>
+    </div>
+  </div>
+
+  <script src="js/app.js"></script>
+</body>
+</html>
