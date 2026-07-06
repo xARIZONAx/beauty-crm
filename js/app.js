@@ -1,674 +1,641 @@
-const STORAGE_KEY = 'beauty_recall_crm_v1';
+const STORAGE_KEY = "beautyrecall-crm-state-v2";
 
-function uid() {
-  return crypto && crypto.randomUUID ? crypto.randomUUID() : String(Date.now() + Math.random());
-}
-
-function q(id) {
-  return document.getElementById(id);
-}
-
-function todayISO() {
-  return new Date().toISOString().slice(0, 10);
-}
-
-function addDays(dateString, days) {
-  const date = new Date((dateString || todayISO()) + 'T12:00:00');
-  date.setDate(date.getDate() + Number(days));
+const now = new Date();
+const iso = (offset = 0) => {
+  const date = new Date(now);
+  date.setDate(now.getDate() + offset);
   return date.toISOString().slice(0, 10);
-}
+};
 
-function formatDate(dateString) {
-  if (!dateString) return '—';
-  return new Intl.DateTimeFormat('pl-PL').format(new Date(dateString + 'T12:00:00'));
-}
-
-function esc(value) {
-  return String(value || '')
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;')
-    .replaceAll("'", '&#039;');
-}
-
-function money(value) {
-  if (value === undefined || value === null || value === '') return '—';
-  return Number(value).toLocaleString('pl-PL') + ' zł';
-}
-
-function fullName(client) {
-  return `${client.firstName || ''} ${client.lastName || ''}`.trim();
-}
-
-function clientTitle(client) {
-  return client && client.gender === 'male' ? 'Pan' : 'Pani';
-}
-
-function defaultTemplates() {
-  return [
+const defaultState = {
+  selectedClientId: "c1",
+  clients: [
     {
-      id: uid(),
-      name: 'Przypomnienie o kolejnej wizycie',
-      content: '{zwrot} {imie}, minął już odpowiedni czas od zabiegu: {zabieg}. Jeśli chce się Pan/Pani umówić na kolejną wizytę, proszę odpisać TAK albo zaproponować dogodny termin.'
+      id: "c1",
+      name: "Anna Kowalska",
+      phone: "501 122 334",
+      email: "anna.kowalska@email.pl",
+      channel: "SMS",
+      tags: ["VIP", "manicure", "hybryda"],
+      birthday: "1992-06-18",
+      notes: "Lubi krótkie terminy po pracy, preferuje delikatne róże.",
+      createdAt: iso(-48)
     },
     {
-      id: uid(),
-      name: 'Kontrola po zabiegu',
-      content: '{zwrot} {imie}, piszę z krótkim przypomnieniem o kontroli po zabiegu: {zabieg}. Proszę dać znać, czy wszystko jest w porządku.'
+      id: "c2",
+      name: "Marta Zielińska",
+      phone: "603 400 900",
+      email: "marta.zielinska@email.pl",
+      channel: "Telefon",
+      tags: ["koloryzacja", "keratyna"],
+      birthday: "1988-11-04",
+      notes: "Wrażliwa skóra głowy. Zapisuj produkt użyty przy koloryzacji.",
+      createdAt: iso(-32)
     },
     {
-      id: uid(),
-      name: 'Prośba o opinię Google',
-      content: '{zwrot} {imie}, dziękujemy za wizytę. Będzie nam bardzo miło, jeśli podzieli się Pan/Pani krótką opinią w Google.'
+      id: "c3",
+      name: "Julia Nowak",
+      phone: "730 808 120",
+      email: "julia.nowak@email.pl",
+      channel: "Instagram",
+      tags: ["brwi", "laminacja"],
+      birthday: "1999-03-21",
+      notes: "Najczęściej rezerwuje wizyty online dzień wcześniej.",
+      createdAt: iso(-14)
     }
-  ];
-}
+  ],
+  appointments: [
+    {
+      id: "a1",
+      clientId: "c1",
+      service: "Manicure hybrydowy",
+      date: iso(0),
+      time: "10:30",
+      status: "Potwierdzona",
+      price: 150,
+      notes: "Kolor nude, baza proteinowa."
+    },
+    {
+      id: "a2",
+      clientId: "c2",
+      service: "Keratynowe wygładzenie",
+      date: iso(0),
+      time: "14:00",
+      status: "Oczekuje",
+      price: 420,
+      notes: "Zarezerwować 2,5h."
+    },
+    {
+      id: "a3",
+      clientId: "c3",
+      service: "Laminacja brwi",
+      date: iso(2),
+      time: "12:15",
+      status: "Potwierdzona",
+      price: 120,
+      notes: "Dodać farbkę grafitową."
+    }
+  ],
+  reminders: [
+    {
+      id: "r1",
+      clientId: "c1",
+      dueDate: iso(1),
+      text: "Wysłać przypomnienie o uzupełnieniu hybrydy.",
+      done: false
+    },
+    {
+      id: "r2",
+      clientId: "c2",
+      dueDate: iso(-1),
+      text: "Zapytać o efekt po keratynie i zaproponować pielęgnację domową.",
+      done: false
+    },
+    {
+      id: "r3",
+      clientId: "c3",
+      dueDate: iso(4),
+      text: "Zaprosić na kontrolę brwi po laminacji.",
+      done: true
+    }
+  ]
+};
 
-function normalizeState(data) {
-  return {
-    clinicName: data.clinicName || 'Gabinet Beauty',
-    clients: (data.clients || []).map(function (client) {
-      return { ...client, gender: client.gender || 'female' };
-    }),
-    treatments: data.treatments || [],
-    reminders: data.reminders || [],
-    templates: data.templates && data.templates.length ? data.templates : defaultTemplates()
-  };
-}
+let state = loadState();
+let activeView = "dashboard";
+let searchTerm = "";
+
+const el = (selector) => document.querySelector(selector);
+const els = (selector) => [...document.querySelectorAll(selector)];
+const byId = (id) => document.getElementById(id);
+const uid = (prefix) => `${prefix}${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}`;
+const money = (value) => `${Number(value || 0).toLocaleString("pl-PL")} zł`;
 
 function loadState() {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return normalizeState({});
-    return normalizeState(JSON.parse(raw));
+    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
+    if (saved && Array.isArray(saved.clients)) return saved;
   } catch (error) {
-    return normalizeState({});
+    console.warn("Nie udało się odczytać danych CRM", error);
   }
+  return structuredClone(defaultState);
 }
-
-let state = loadState();
-let selectedClientId = state.clients[0] ? state.clients[0].id : null;
-let reminderFilter = 'today';
 
 function saveState() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-  renderAll();
+  byId("storageStatus").textContent = "Zapisano lokalnie";
 }
 
-function normalizePhone(phone) {
-  let value = String(phone || '').replace(/[^0-9]/g, '');
-  if (value.length === 9) value = '48' + value;
-  return value;
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
 }
 
-function replaceVars(text, client, treatmentName = '') {
-  const title = clientTitle(client);
-  let result = String(text || '')
-    .replaceAll('{zwrot}', title)
-    .replaceAll('{imie}', client ? client.firstName || '' : '')
-    .replaceAll('{zabieg}', treatmentName || '')
-    .replaceAll('{data}', todayISO())
-    .replaceAll('{gabinet}', state.clinicName || 'Gabinet Beauty');
-
-  if (title === 'Pan') {
-    result = result.replace(/^Pani\s+/i, 'Pan ');
-    result = result.replace(/\bPani\s+/g, 'Pan ');
-    result = result.replaceAll('Pan/Pani', 'Pan');
-    result = result.replaceAll('pan/pani', 'pan');
-  } else {
-    result = result.replaceAll('Pan/Pani', 'Pani');
-    result = result.replaceAll('pan/pani', 'pani');
-  }
-
-  return result;
+function formatDate(date) {
+  return new Intl.DateTimeFormat("pl-PL", { day: "2-digit", month: "short", year: "numeric" }).format(new Date(date));
 }
 
-function getClientTreatments(clientId) {
-  return state.treatments
-    .filter(function (treatment) { return treatment.clientId === clientId; })
-    .sort(function (a, b) { return String(b.treatmentDate).localeCompare(String(a.treatmentDate)); });
+function getClient(clientId) {
+  return state.clients.find((client) => client.id === clientId);
 }
 
-function getClientReminders(clientId) {
-  return state.reminders
-    .filter(function (reminder) { return reminder.clientId === clientId; })
-    .sort(function (a, b) { return String(a.remindAt).localeCompare(String(b.remindAt)); });
+function getClientName(clientId) {
+  return getClient(clientId)?.name || "Nieznany klient";
 }
 
-function latestTreatment(clientId) {
-  return getClientTreatments(clientId)[0];
-}
-
-function nextReminder(clientId) {
-  return getClientReminders(clientId).filter(function (reminder) { return reminder.status !== 'done'; })[0];
-}
-
-function setView(view) {
-  document.querySelectorAll('.view').forEach(function (element) {
-    element.classList.remove('active');
+function filteredClients() {
+  if (!searchTerm) return state.clients;
+  const term = searchTerm.toLowerCase();
+  return state.clients.filter((client) => {
+    const appointmentText = state.appointments
+      .filter((appointment) => appointment.clientId === client.id)
+      .map((appointment) => appointment.service)
+      .join(" ");
+    return [client.name, client.phone, client.email, client.channel, client.notes, client.tags.join(" "), appointmentText]
+      .join(" ")
+      .toLowerCase()
+      .includes(term);
   });
-  q('view-' + view).classList.add('active');
-  document.querySelectorAll('.tab').forEach(function (button) {
-    button.classList.toggle('active', button.dataset.view === view);
-  });
-  renderAll();
 }
 
-function renderAll() {
-  renderStats();
-  renderClientList();
-  renderClientDetails();
-  renderClientsTable();
-  renderRemindersTable();
-  renderTemplates();
+function filteredAppointments() {
+  const appointments = [...state.appointments].sort((a, b) => `${a.date}T${a.time}`.localeCompare(`${b.date}T${b.time}`));
+  if (!searchTerm) return appointments;
+  const term = searchTerm.toLowerCase();
+  return appointments.filter((appointment) =>
+    [getClientName(appointment.clientId), appointment.service, appointment.status, appointment.notes, appointment.date]
+      .join(" ")
+      .toLowerCase()
+      .includes(term)
+  );
 }
 
-function renderStats() {
-  const today = todayISO();
-  q('statClients').textContent = state.clients.length;
-  q('statTreatments').textContent = state.treatments.length;
-  q('statToday').textContent = state.reminders.filter(function (r) { return r.status !== 'done' && r.remindAt <= today; }).length;
-  q('statPending').textContent = state.reminders.filter(function (r) { return r.status !== 'done'; }).length;
+function statusClass(status) {
+  if (status === "Oczekuje") return "waiting";
+  if (status === "Anulowana") return "cancelled";
+  return "";
 }
 
-function renderClientList() {
-  const box = q('clientList');
-  if (!box) return;
-  const search = (q('clientSearch') ? q('clientSearch').value : '').toLowerCase();
-  const clients = state.clients
-    .filter(function (client) {
-      return `${fullName(client)} ${client.phone || ''} ${client.email || ''}`.toLowerCase().includes(search);
-    })
-    .sort(function (a, b) { return fullName(a).localeCompare(fullName(b), 'pl'); });
-
-  if (!clients.length) {
-    box.innerHTML = `<div class="empty">Brak klientek/klientów. Kliknij „Dodaj klientkę”.</div>`;
-    return;
-  }
-
-  box.innerHTML = clients.map(function (client) {
-    const latest = latestTreatment(client.id);
-    const reminder = nextReminder(client.id);
-    return `<button class="client-item ${client.id === selectedClientId ? 'active' : ''}" onclick='selectClient(${JSON.stringify(client.id)})'>
-      <strong>${esc(fullName(client))}</strong><br>
-      <span class="muted">${esc(client.phone || client.email || 'brak kontaktu')}</span><br>
-      <span class="pill">${clientTitle(client)}</span>
-      ${latest ? `<span class="pill">${esc(latest.treatmentName)}</span>` : `<span class="pill red">brak zabiegów</span>`}
-      ${reminder ? `<span class="pill green">${formatDate(reminder.remindAt)}</span>` : ''}
-    </button>`;
-  }).join('');
+function render() {
+  renderMetrics();
+  renderTimeline();
+  renderReminderStack();
+  renderClients();
+  renderAppointments();
+  renderReminderBoard();
+  renderCampaigns();
+  renderSelectOptions();
+  refreshIcons();
 }
 
-function renderClientDetails() {
-  const box = q('clientDetails');
-  if (!box) return;
-  const client = state.clients.find(function (item) { return item.id === selectedClientId; });
+function renderMetrics() {
+  const today = iso(0);
+  const monthRevenue = state.appointments
+    .filter((appointment) => appointment.status !== "Anulowana" && appointment.date.slice(0, 7) === today.slice(0, 7))
+    .reduce((sum, appointment) => sum + Number(appointment.price || 0), 0);
+  const openReminders = state.reminders.filter((reminder) => !reminder.done).length;
+  const todayAppointments = state.appointments.filter((appointment) => appointment.date === today && appointment.status !== "Anulowana").length;
+  const vipClients = state.clients.filter((client) => client.tags.some((tag) => tag.toLowerCase() === "vip")).length;
 
-  if (!client) {
-    box.innerHTML = `<div class="empty"><h3>Wybierz klientkę/klienta</h3><p>Po lewej zobaczysz listę kontaktów.</p><button onclick="openClientModal()">+ Dodaj klientkę</button></div>`;
-    return;
-  }
+  const metrics = [
+    ["users", state.clients.length, "klientów w bazie"],
+    ["calendar-check", todayAppointments, "wizyty dzisiaj"],
+    ["wallet", money(monthRevenue), "obrót w tym miesiącu"],
+    ["bell-ring", openReminders, "otwarte przypomnienia"],
+    ["sparkles", vipClients, "klientki VIP"]
+  ];
 
-  const treatments = getClientTreatments(client.id);
-  const reminders = getClientReminders(client.id);
+  byId("metricGrid").innerHTML = metrics
+    .map(([icon, value, label]) => `
+      <article class="metric-card">
+        <div class="metric-icon"><i data-lucide="${icon}"></i></div>
+        <strong>${escapeHtml(value)}</strong>
+        <span>${escapeHtml(label)}</span>
+      </article>
+    `)
+    .join("");
+}
 
-  box.innerHTML = `
-    <div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:start">
-      <div>
-        <h2>${esc(fullName(client))}</h2>
-        <div class="muted">${esc(client.phone || 'brak telefonu')}${client.email ? ' · ' + esc(client.email) : ''}</div>
-        <span class="pill">zwrot: ${clientTitle(client)}</span>
-        <span class="pill ${client.marketingConsent ? 'green' : 'red'}">marketing: ${client.marketingConsent ? 'zgoda' : 'brak zgody'}</span>
-        ${client.birthDate ? `<span class="pill">ur. ${formatDate(client.birthDate)}</span>` : ''}
+function renderTimeline() {
+  const upcoming = filteredAppointments()
+    .filter((appointment) => appointment.status !== "Anulowana" && appointment.date >= iso(0))
+    .slice(0, 5);
+
+  byId("todayTimeline").innerHTML = upcoming.length
+    ? upcoming.map((appointment) => `
+        <article class="timeline-item">
+          <span class="time-chip">${escapeHtml(appointment.date === iso(0) ? appointment.time : formatDate(appointment.date))}</span>
+          <div>
+            <strong>${escapeHtml(getClientName(appointment.clientId))}</strong>
+            <span class="muted">${escapeHtml(appointment.service)} · ${escapeHtml(appointment.notes || "bez notatki")}</span>
+          </div>
+          <span class="status-chip ${statusClass(appointment.status)}">${escapeHtml(appointment.status)}</span>
+        </article>
+      `).join("")
+    : `<div class="empty-state">Brak nadchodzących wizyt dla aktualnego filtra.</div>`;
+}
+
+function renderReminderStack() {
+  const open = state.reminders
+    .filter((reminder) => !reminder.done)
+    .sort((a, b) => a.dueDate.localeCompare(b.dueDate))
+    .slice(0, 4);
+
+  byId("reminderStack").innerHTML = open.length
+    ? open.map((reminder) => reminderCard(reminder)).join("")
+    : `<div class="empty-state">Wszystkie przypomnienia są odhaczone.</div>`;
+}
+
+function reminderCard(reminder) {
+  const overdue = reminder.dueDate < iso(0) && !reminder.done;
+  return `
+    <article class="stack-item ${overdue ? "overdue" : ""}">
+      <strong>${escapeHtml(getClientName(reminder.clientId))}</strong>
+      <span class="muted">${escapeHtml(reminder.text)}</span>
+      <div class="tag-row">
+        <span class="tag-chip">${formatDate(reminder.dueDate)}</span>
+        ${overdue ? `<span class="tag-chip">Po terminie</span>` : ""}
       </div>
-      <div class="actions" style="margin-top:0">
-        <button class="small" onclick='openTreatmentModal(${JSON.stringify(client.id)})'>+ Zabieg</button>
-        <button class="secondary small" onclick='openReminderModal(${JSON.stringify(client.id)})'>+ Przypomnienie</button>
-        <button class="ghost small" onclick='openClientModal(${JSON.stringify(client.id)})'>Edytuj</button>
-        <button class="danger small" onclick='deleteClient(${JSON.stringify(client.id)})'>Usuń</button>
-      </div>
-    </div>
-
-    <h3 style="margin-top:18px">Notatki</h3>
-    <div class="message-box">${esc(client.notes || 'Brak notatek.')}</div>
-
-    <h3 style="margin-top:18px">Historia zabiegów</h3>
-    ${treatments.length ? `<table><thead><tr><th>Data</th><th>Zabieg</th><th>Okolica/preparat</th><th>Cena</th><th></th></tr></thead><tbody>${treatments.map(function (treatment) {
-      return `<tr><td class="nowrap">${formatDate(treatment.treatmentDate)}</td><td><strong>${esc(treatment.treatmentName)}</strong><br><span class="muted">${esc(treatment.notes || '')}</span></td><td>${esc([treatment.area, treatment.productUsed].filter(Boolean).join(' · ') || '—')}</td><td>${money(treatment.price)}</td><td><button class="danger small" onclick='deleteTreatment(${JSON.stringify(treatment.id)})'>Usuń</button></td></tr>`;
-    }).join('')}</tbody></table>` : `<div class="empty">Brak zabiegów.</div>`}
-
-    <h3 style="margin-top:18px">Przypomnienia</h3>
-    ${reminders.length ? `<table><thead><tr><th>Data</th><th>Powód</th><th>Status</th><th>Akcje</th></tr></thead><tbody>${reminders.map(reminderRow).join('')}</tbody></table>` : `<div class="empty">Brak przypomnień.</div>`}
+    </article>
   `;
 }
 
-function reminderRow(reminder) {
-  return `<tr><td class="nowrap">${formatDate(reminder.remindAt)}</td><td>${esc(reminder.reason || '—')}<br><span class="muted">${esc((reminder.message || '').slice(0, 90))}${(reminder.message || '').length > 90 ? '...' : ''}</span></td><td>${reminder.status === 'done' ? `<span class="pill green">zrobione</span>` : `<span class="pill">aktywne</span>`}</td><td>${reminderActions(reminder)}</td></tr>`;
+function renderClients() {
+  const clients = filteredClients();
+  if (!clients.some((client) => client.id === state.selectedClientId) && clients[0]) {
+    state.selectedClientId = clients[0].id;
+  }
+
+  byId("clientList").innerHTML = clients.length
+    ? clients.map((client) => `
+        <button class="client-card ${client.id === state.selectedClientId ? "active" : ""}" type="button" data-select-client="${client.id}">
+          <strong>${escapeHtml(client.name)}</strong>
+          <span class="muted">${escapeHtml(client.phone || "brak telefonu")} · ${escapeHtml(client.channel)}</span>
+          <div class="tag-row">${client.tags.map((tag) => `<span class="tag-chip">${escapeHtml(tag)}</span>`).join("")}</div>
+        </button>
+      `).join("")
+    : `<div class="empty-state">Brak klientów dla aktualnego wyszukiwania.</div>`;
+
+  renderClientDetails();
 }
 
-function reminderActions(reminder) {
-  return `<div class="actions" style="margin-top:0">
-    <button class="small" onclick='openWhatsApp(${JSON.stringify(reminder.id)})'>WhatsApp</button>
-    <button class="secondary small" onclick='copyMessage(${JSON.stringify(reminder.id)})'>Kopiuj</button>
-    ${reminder.status === 'done' ? `<button class="ghost small" onclick='toggleReminder(${JSON.stringify(reminder.id)}, "pending")'>Cofnij</button>` : `<button class="ghost small" onclick='toggleReminder(${JSON.stringify(reminder.id)}, "done")'>Zrobione</button>`}
-    <button class="danger small" onclick='deleteReminder(${JSON.stringify(reminder.id)})'>Usuń</button>
-  </div>`;
-}
-
-function renderClientsTable() {
-  const box = q('clientsTable');
-  if (!box) return;
-  if (!state.clients.length) {
-    box.innerHTML = `<div class="empty">Brak klientek/klientów w bazie.</div>`;
+function renderClientDetails() {
+  const client = getClient(state.selectedClientId);
+  const target = byId("clientDetails");
+  if (!client) {
+    target.innerHTML = `<div class="empty-state">Wybierz klienta z listy.</div>`;
     return;
   }
 
-  box.innerHTML = `<table><thead><tr><th>Kontakt</th><th>Telefon</th><th>Ostatni zabieg</th><th>Następny kontakt</th><th></th></tr></thead><tbody>${state.clients.slice().sort(function (a, b) {
-    return fullName(a).localeCompare(fullName(b), 'pl');
-  }).map(function (client) {
-    const latest = latestTreatment(client.id);
-    const reminder = nextReminder(client.id);
-    return `<tr><td><strong>${esc(fullName(client))}</strong><br><span class="muted">${clientTitle(client)} ${esc(client.email || '')}</span></td><td>${esc(client.phone || '—')}</td><td>${latest ? `${esc(latest.treatmentName)}<br><span class="muted">${formatDate(latest.treatmentDate)}</span>` : '—'}</td><td>${reminder ? `${formatDate(reminder.remindAt)}<br><span class="muted">${esc(reminder.reason || '')}</span>` : '—'}</td><td><button class="small" onclick='selectAndOpen(${JSON.stringify(client.id)})'>Otwórz</button></td></tr>`;
-  }).join('')}</tbody></table>`;
+  const appointments = state.appointments.filter((appointment) => appointment.clientId === client.id);
+  const revenue = appointments.reduce((sum, appointment) => sum + Number(appointment.price || 0), 0);
+  const lastVisit = appointments.sort((a, b) => `${b.date}T${b.time}`.localeCompare(`${a.date}T${a.time}`))[0];
+
+  target.innerHTML = `
+    <div class="panel-header">
+      <div>
+        <p class="eyebrow">Profil klienta</p>
+        <h3>${escapeHtml(client.name)}</h3>
+      </div>
+      <button class="icon-button danger-button" type="button" data-delete-client="${client.id}" aria-label="Usuń klienta">
+        <i data-lucide="trash-2"></i>
+      </button>
+    </div>
+    <div class="detail-grid">
+      <div class="detail-cell"><span>Telefon</span><strong>${escapeHtml(client.phone || "brak")}</strong></div>
+      <div class="detail-cell"><span>E-mail</span><strong>${escapeHtml(client.email || "brak")}</strong></div>
+      <div class="detail-cell"><span>Kontakt</span><strong>${escapeHtml(client.channel)}</strong></div>
+      <div class="detail-cell"><span>Przychód</span><strong>${money(revenue)}</strong></div>
+      <div class="detail-cell"><span>Ostatnia wizyta</span><strong>${lastVisit ? formatDate(lastVisit.date) : "brak"}</strong></div>
+      <div class="detail-cell"><span>Urodziny</span><strong>${client.birthday ? formatDate(client.birthday) : "brak"}</strong></div>
+    </div>
+    <p class="muted">${escapeHtml(client.notes || "Brak notatki.")}</p>
+    <div class="tag-row">${client.tags.map((tag) => `<span class="tag-chip">${escapeHtml(tag)}</span>`).join("")}</div>
+  `;
 }
 
-function setReminderFilter(filter) {
-  reminderFilter = filter;
-  renderRemindersTable();
+function renderAppointments() {
+  const rows = filteredAppointments();
+  byId("appointmentRows").innerHTML = rows.length
+    ? rows.map((appointment) => `
+        <tr>
+          <td><strong>${formatDate(appointment.date)}</strong><br><span class="muted">${escapeHtml(appointment.time)}</span></td>
+          <td>${escapeHtml(getClientName(appointment.clientId))}</td>
+          <td><strong>${escapeHtml(appointment.service)}</strong><br><span class="muted">${escapeHtml(appointment.notes || "")}</span></td>
+          <td><span class="status-chip ${statusClass(appointment.status)}">${escapeHtml(appointment.status)}</span></td>
+          <td>${money(appointment.price)}</td>
+          <td>
+            <div class="row-actions">
+              <button class="icon-button" type="button" data-complete-appointment="${appointment.id}" aria-label="Oznacz jako zakończoną">
+                <i data-lucide="check"></i>
+              </button>
+              <button class="icon-button danger-button" type="button" data-delete-appointment="${appointment.id}" aria-label="Usuń wizytę">
+                <i data-lucide="trash-2"></i>
+              </button>
+            </div>
+          </td>
+        </tr>
+      `).join("")
+    : `<tr><td colspan="6"><div class="empty-state">Brak wizyt dla aktualnego filtra.</div></td></tr>`;
 }
 
-function renderRemindersTable() {
-  const box = q('remindersTable');
-  if (!box) return;
-  const today = todayISO();
-  let reminders = state.reminders.slice();
-  if (reminderFilter === 'today') reminders = reminders.filter(function (r) { return r.status !== 'done' && r.remindAt <= today; });
-  if (reminderFilter === 'pending') reminders = reminders.filter(function (r) { return r.status !== 'done'; });
-  if (reminderFilter === 'done') reminders = reminders.filter(function (r) { return r.status === 'done'; });
-  reminders.sort(function (a, b) { return String(a.remindAt).localeCompare(String(b.remindAt)); });
+function renderReminderBoard() {
+  const columns = [
+    ["Po terminie", (reminder) => !reminder.done && reminder.dueDate < iso(0)],
+    ["Do zrobienia", (reminder) => !reminder.done && reminder.dueDate >= iso(0)],
+    ["Zrobione", (reminder) => reminder.done]
+  ];
 
-  if (!reminders.length) {
-    box.innerHTML = `<div class="empty">Brak przypomnień w tym filtrze.</div>`;
-    return;
-  }
-
-  box.innerHTML = `<table><thead><tr><th>Data</th><th>Kontakt</th><th>Powód</th><th>Status</th><th>Akcje</th></tr></thead><tbody>${reminders.map(function (reminder) {
-    const client = state.clients.find(function (item) { return item.id === reminder.clientId; });
-    return `<tr><td>${formatDate(reminder.remindAt)}</td><td><strong>${esc(client ? fullName(client) : 'Usunięty kontakt')}</strong><br><span class="muted">${client ? clientTitle(client) : ''} ${esc(client && client.phone ? client.phone : '')}</span></td><td>${esc(reminder.reason || '—')}</td><td>${reminder.status === 'done' ? `<span class="pill green">zrobione</span>` : `<span class="pill">aktywne</span>`}</td><td>${reminderActions(reminder)}</td></tr>`;
-  }).join('')}</tbody></table>`;
+  byId("reminderBoard").innerHTML = columns.map(([title, predicate]) => {
+    const reminders = state.reminders.filter(predicate);
+    return `
+      <section class="kanban-column">
+        <h4>${title}</h4>
+        <div class="stack-list">
+          ${reminders.length ? reminders.map((reminder) => `
+            <article class="stack-item ${reminder.dueDate < iso(0) && !reminder.done ? "overdue" : ""}">
+              <strong>${escapeHtml(getClientName(reminder.clientId))}</strong>
+              <span class="muted">${escapeHtml(reminder.text)}</span>
+              <div class="tag-row">
+                <span class="tag-chip">${formatDate(reminder.dueDate)}</span>
+              </div>
+              <div class="row-actions">
+                <button class="icon-button" type="button" data-toggle-reminder="${reminder.id}" aria-label="Zmień status przypomnienia">
+                  <i data-lucide="${reminder.done ? "rotate-ccw" : "check"}"></i>
+                </button>
+                <button class="icon-button danger-button" type="button" data-delete-reminder="${reminder.id}" aria-label="Usuń przypomnienie">
+                  <i data-lucide="trash-2"></i>
+                </button>
+              </div>
+            </article>
+          `).join("") : `<div class="empty-state">Pusto</div>`}
+        </div>
+      </section>
+    `;
+  }).join("");
 }
 
-function renderTemplates() {
-  const box = q('templatesList');
-  if (!box) return;
-  box.innerHTML = state.templates.map(function (template) {
-    return `<div class="panel" style="box-shadow:none;margin-bottom:10px"><strong>${esc(template.name)}</strong><div class="message-box" style="margin-top:8px">${esc(template.content)}</div><div class="actions"><button class="secondary small" onclick='openTemplateModal(${JSON.stringify(template.id)})'>Edytuj</button><button class="danger small" onclick='deleteTemplate(${JSON.stringify(template.id)})'>Usuń</button></div></div>`;
-  }).join('') || `<div class="empty">Brak szablonów.</div>`;
-}
+function renderCampaigns() {
+  const segments = [
+    ["VIP", state.clients.filter((client) => client.tags.some((tag) => tag.toLowerCase() === "vip")).length],
+    ["Bez kolejnej wizyty", state.clients.filter((client) => !state.appointments.some((appointment) => appointment.clientId === client.id && appointment.date >= iso(0))).length],
+    ["Urodziny w bazie", state.clients.filter((client) => client.birthday).length]
+  ];
 
-function selectClient(id) {
-  selectedClientId = id;
-  renderAll();
-}
-
-function selectAndOpen(id) {
-  selectedClientId = id;
-  setView('dashboard');
-}
-
-function openClientModal(id = null) {
-  q('clientForm').reset();
-  q('clientId').value = '';
-  q('clientModalTitle').textContent = id ? 'Edytuj kontakt' : 'Dodaj klientkę/klienta';
-
-  if (id) {
-    const client = state.clients.find(function (item) { return item.id === id; });
-    if (client) {
-      q('clientId').value = client.id;
-      q('firstName').value = client.firstName || '';
-      q('lastName').value = client.lastName || '';
-      q('gender').value = client.gender || 'female';
-      q('phone').value = client.phone || '';
-      q('email').value = client.email || '';
-      q('birthDate').value = client.birthDate || '';
-      q('marketingConsent').value = String(Boolean(client.marketingConsent));
-      q('notes').value = client.notes || '';
+  const templates = [
+    {
+      title: "Przypomnienie o wizycie",
+      text: "Cześć {imię}, przypominamy o wizycie w BeautyRecall. Jeśli chcesz zmienić termin, daj nam znać."
+    },
+    {
+      title: "Follow-up po usłudze",
+      text: "Cześć {imię}, jak efekt po ostatniej wizycie? Mamy dla Ciebie rekomendację pielęgnacji i wolny termin na kontrolę."
+    },
+    {
+      title: "Powrót po przerwie",
+      text: "Cześć {imię}, dawno Cię u nas nie było. Przygotowaliśmy kilka nowych terminów i mały bonus przy kolejnej rezerwacji."
+    },
+    {
+      title: "Urodzinowa wiadomość",
+      text: "Cześć {imię}, wszystkiego pięknego z okazji urodzin. Czeka na Ciebie urodzinowy rabat w salonie BeautyRecall."
     }
-  } else {
-    q('gender').value = 'female';
+  ];
+
+  byId("campaignGrid").innerHTML = templates.map((template) => `
+    <article class="campaign-card">
+      <strong>${escapeHtml(template.title)}</strong>
+      <textarea readonly>${escapeHtml(template.text)}</textarea>
+      <button class="secondary-button" type="button" data-copy-template="${escapeHtml(template.text)}">
+        <i data-lucide="copy"></i>
+        <span>Kopiuj</span>
+      </button>
+    </article>
+  `).join("");
+
+  byId("segmentList").innerHTML = segments.map(([name, count]) => `
+    <article class="stack-item">
+      <strong>${escapeHtml(name)}</strong>
+      <span class="muted">${count} kontaktów</span>
+    </article>
+  `).join("");
+}
+
+function renderSelectOptions() {
+  const options = state.clients
+    .map((client) => `<option value="${client.id}">${escapeHtml(client.name)}</option>`)
+    .join("");
+  byId("appointmentClientSelect").innerHTML = options;
+  byId("reminderClientSelect").innerHTML = options;
+}
+
+function switchView(view) {
+  activeView = view;
+  els(".view").forEach((item) => item.classList.toggle("active", item.id === `${view}View`));
+  els(".nav-item").forEach((item) => {
+    const selected = item.dataset.view === view;
+    item.classList.toggle("active", selected);
+    item.toggleAttribute("aria-current", selected);
+  });
+  byId("viewTitle").textContent = byId(`${view}View`).dataset.title;
+}
+
+function openModal(name) {
+  const modal = byId(`${name}Modal`);
+  if (!modal) return;
+  const today = iso(0);
+  if (name === "appointment") {
+    byId("appointmentForm").elements.date.value = today;
+    byId("appointmentForm").elements.time.value = "10:00";
   }
-
-  q('clientModal').classList.add('open');
+  if (name === "reminder") byId("reminderForm").elements.dueDate.value = iso(7);
+  modal.showModal();
+  refreshIcons();
 }
 
-function closeClientModal() {
-  q('clientModal').classList.remove('open');
+function closeModals() {
+  els("dialog[open]").forEach((dialog) => dialog.close());
 }
 
-function saveClient(event) {
+function toast(message) {
+  const node = document.createElement("div");
+  node.className = "toast";
+  node.textContent = message;
+  byId("toastRegion").append(node);
+  setTimeout(() => node.remove(), 3600);
+}
+
+function handleClientSubmit(event) {
   event.preventDefault();
-  const id = q('clientId').value;
-  const oldClient = id ? state.clients.find(function (item) { return item.id === id; }) : null;
+  const data = Object.fromEntries(new FormData(event.currentTarget));
   const client = {
-    id: id || uid(),
-    firstName: q('firstName').value.trim(),
-    lastName: q('lastName').value.trim(),
-    gender: q('gender').value || 'female',
-    phone: q('phone').value.trim(),
-    email: q('email').value.trim(),
-    birthDate: q('birthDate').value,
-    marketingConsent: q('marketingConsent').value === 'true',
-    notes: q('notes').value.trim(),
-    createdAt: oldClient ? oldClient.createdAt : new Date().toISOString()
+    id: uid("c"),
+    name: data.name.trim(),
+    phone: data.phone.trim(),
+    email: data.email.trim(),
+    channel: data.channel,
+    tags: data.tags.split(",").map((tag) => tag.trim()).filter(Boolean),
+    birthday: data.birthday,
+    notes: data.notes.trim(),
+    createdAt: iso(0)
   };
-
-  if (!client.firstName) {
-    alert('Podaj imię.');
-    return;
-  }
-
-  if (id) state.clients = state.clients.map(function (item) { return item.id === id ? client : item; });
-  else {
-    state.clients.push(client);
-    selectedClientId = client.id;
-  }
-
-  closeClientModal();
+  state.clients.unshift(client);
+  state.selectedClientId = client.id;
   saveState();
+  event.currentTarget.reset();
+  closeModals();
+  switchView("clients");
+  render();
+  toast("Klient zapisany.");
 }
 
-function deleteClient(id) {
-  const client = state.clients.find(function (item) { return item.id === id; });
-  if (!confirm('Usunąć kontakt ' + fullName(client) + ' oraz jego dane?')) return;
-  state.clients = state.clients.filter(function (item) { return item.id !== id; });
-  state.treatments = state.treatments.filter(function (item) { return item.clientId !== id; });
-  state.reminders = state.reminders.filter(function (item) { return item.clientId !== id; });
-  selectedClientId = state.clients[0] ? state.clients[0].id : null;
-  saveState();
-}
-
-function openTreatmentModal(clientId) {
-  q('treatmentForm').reset();
-  q('treatmentClientId').value = clientId;
-  q('treatmentDate').value = todayISO();
-  q('treatmentModal').classList.add('open');
-}
-
-function closeTreatmentModal() {
-  q('treatmentModal').classList.remove('open');
-}
-
-function updateReminderDate() {
-  const preset = q('reminderPreset').value;
-  const treatmentDate = q('treatmentDate').value || todayISO();
-  const clientId = q('treatmentClientId').value;
-  const client = state.clients.find(function (item) { return item.id === clientId; });
-  const treatmentName = q('treatmentName').value.trim();
-
-  if (!preset) {
-    q('reminderDate').value = '';
-    return;
-  }
-
-  if (preset !== 'custom') q('reminderDate').value = addDays(treatmentDate, Number(preset));
-  if (!q('reminderReason').value) q('reminderReason').value = (preset === '7' || preset === '14' ? 'kontrola po zabiegu: ' : 'kolejna wizyta po zabiegu: ') + treatmentName;
-
-  const template = (preset === '7' || preset === '14')
-    ? state.templates.find(function (t) { return t.name.toLowerCase().includes('kontrola'); })
-    : state.templates.find(function (t) { return t.name.toLowerCase().includes('przypomnienie'); });
-
-  q('reminderMessage').value = replaceVars((template || state.templates[0] || {}).content || '', client, treatmentName);
-}
-
-function saveTreatment(event) {
+function handleAppointmentSubmit(event) {
   event.preventDefault();
-  const clientId = q('treatmentClientId').value;
-  const treatment = {
-    id: uid(),
-    clientId: clientId,
-    treatmentName: q('treatmentName').value.trim(),
-    treatmentDate: q('treatmentDate').value,
-    area: q('area').value.trim(),
-    productUsed: q('productUsed').value.trim(),
-    price: q('price').value,
-    notes: q('treatmentNotes').value.trim(),
-    createdAt: new Date().toISOString()
-  };
-
-  state.treatments.push(treatment);
-
-  if (q('reminderDate').value) {
-    state.reminders.push({
-      id: uid(),
-      clientId: clientId,
-      treatmentId: treatment.id,
-      remindAt: q('reminderDate').value,
-      reason: q('reminderReason').value.trim() || 'kolejny kontakt: ' + treatment.treatmentName,
-      message: q('reminderMessage').value.trim(),
-      status: 'pending',
-      createdAt: new Date().toISOString()
-    });
-  }
-
-  closeTreatmentModal();
+  const data = Object.fromEntries(new FormData(event.currentTarget));
+  state.appointments.push({
+    id: uid("a"),
+    clientId: data.clientId,
+    service: data.service.trim(),
+    date: data.date,
+    time: data.time,
+    status: data.status,
+    price: Number(data.price || 0),
+    notes: data.notes.trim()
+  });
   saveState();
+  event.currentTarget.reset();
+  closeModals();
+  switchView("appointments");
+  render();
+  toast("Wizyta dodana do terminarza.");
 }
 
-function deleteTreatment(id) {
-  if (!confirm('Usunąć ten zabieg?')) return;
-  state.treatments = state.treatments.filter(function (item) { return item.id !== id; });
-  state.reminders = state.reminders.filter(function (item) { return item.treatmentId !== id; });
-  saveState();
-}
-
-function openReminderModal(clientId) {
-  const client = state.clients.find(function (item) { return item.id === clientId; });
-  const latest = latestTreatment(clientId);
-  const template = state.templates.find(function (t) { return t.name.toLowerCase().includes('przypomnienie'); }) || state.templates[0];
-
-  q('manualReminderForm').reset();
-  q('manualReminderClientId').value = clientId;
-  q('manualReminderDate').value = todayISO();
-  q('manualReminderReason').value = latest ? 'kolejna wizyta po zabiegu: ' + latest.treatmentName : 'kontakt z klientką/klientem';
-  q('manualReminderMessage').value = replaceVars(template ? template.content : '', client, latest ? latest.treatmentName : '');
-  q('reminderModal').classList.add('open');
-}
-
-function closeReminderModal() {
-  q('reminderModal').classList.remove('open');
-}
-
-function saveManualReminder(event) {
+function handleReminderSubmit(event) {
   event.preventDefault();
+  const data = Object.fromEntries(new FormData(event.currentTarget));
   state.reminders.push({
-    id: uid(),
-    clientId: q('manualReminderClientId').value,
-    treatmentId: null,
-    remindAt: q('manualReminderDate').value,
-    reason: q('manualReminderReason').value.trim(),
-    message: q('manualReminderMessage').value.trim(),
-    status: 'pending',
-    createdAt: new Date().toISOString()
+    id: uid("r"),
+    clientId: data.clientId,
+    dueDate: data.dueDate,
+    text: data.text.trim(),
+    done: false
   });
-  closeReminderModal();
   saveState();
-}
-
-function toggleReminder(id, status) {
-  state.reminders = state.reminders.map(function (item) { return item.id === id ? { ...item, status: status } : item; });
-  saveState();
-}
-
-function deleteReminder(id) {
-  if (!confirm('Usunąć przypomnienie?')) return;
-  state.reminders = state.reminders.filter(function (item) { return item.id !== id; });
-  saveState();
-}
-
-function openWhatsApp(reminderId) {
-  const reminder = state.reminders.find(function (item) { return item.id === reminderId; });
-  const client = state.clients.find(function (item) { return item.id === (reminder && reminder.clientId); });
-  if (!reminder || !client) return alert('Nie znaleziono przypomnienia lub kontaktu.');
-  const phone = normalizePhone(client.phone);
-  if (!phone) return alert('Ten kontakt nie ma numeru telefonu.');
-  window.open('https://wa.me/' + phone + '?text=' + encodeURIComponent(reminder.message || reminder.reason || 'Dzień dobry, przypominamy o kontakcie z gabinetem.'), '_blank');
-}
-
-function copyMessage(reminderId) {
-  const reminder = state.reminders.find(function (item) { return item.id === reminderId; });
-  if (!reminder) return;
-  navigator.clipboard.writeText(reminder.message || reminder.reason || '').then(function () {
-    alert('Wiadomość skopiowana.');
-  });
-}
-
-function openTemplateModal(id = null) {
-  q('templateForm').reset();
-  q('templateId').value = '';
-  q('templateModalTitle').textContent = id ? 'Edytuj szablon' : 'Dodaj szablon';
-  if (id) {
-    const template = state.templates.find(function (item) { return item.id === id; });
-    if (template) {
-      q('templateId').value = template.id;
-      q('templateName').value = template.name;
-      q('templateContent').value = template.content;
-    }
-  }
-  q('templateModal').classList.add('open');
-}
-
-function closeTemplateModal() {
-  q('templateModal').classList.remove('open');
-}
-
-function saveTemplate(event) {
-  event.preventDefault();
-  const id = q('templateId').value;
-  const oldTemplate = id ? state.templates.find(function (item) { return item.id === id; }) : null;
-  const template = {
-    id: id || uid(),
-    name: q('templateName').value.trim(),
-    content: q('templateContent').value.trim(),
-    createdAt: oldTemplate ? oldTemplate.createdAt : new Date().toISOString()
-  };
-
-  if (id) state.templates = state.templates.map(function (item) { return item.id === id ? template : item; });
-  else state.templates.push(template);
-
-  closeTemplateModal();
-  saveState();
-}
-
-function deleteTemplate(id) {
-  if (!confirm('Usunąć szablon?')) return;
-  state.templates = state.templates.filter(function (item) { return item.id !== id; });
-  saveState();
-}
-
-function resetTemplates() {
-  if (!confirm('Przywrócić domyślne szablony?')) return;
-  state.templates = defaultTemplates();
-  saveState();
+  event.currentTarget.reset();
+  closeModals();
+  switchView("reminders");
+  render();
+  toast("Przypomnienie dodane.");
 }
 
 function exportData() {
-  const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+  const blob = new Blob([JSON.stringify(state, null, 2)], { type: "application/json" });
   const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
+  const link = document.createElement("a");
   link.href = url;
-  link.download = 'beauty-crm-eksport-' + todayISO() + '.json';
+  link.download = `beautyrecall-crm-${iso(0)}.json`;
   link.click();
   URL.revokeObjectURL(url);
+  toast("Eksport gotowy.");
 }
 
-function importData(event) {
-  const file = event.target.files && event.target.files[0];
+function importData(file) {
   if (!file) return;
   const reader = new FileReader();
-  reader.onload = function () {
+  reader.addEventListener("load", () => {
     try {
-      const imported = JSON.parse(reader.result);
-      if (!confirm('Import zastąpi aktualne dane. Kontynuować?')) return;
-      state = normalizeState(imported);
-      selectedClientId = state.clients[0] ? state.clients[0].id : null;
+      const nextState = JSON.parse(reader.result);
+      if (!Array.isArray(nextState.clients) || !Array.isArray(nextState.appointments)) {
+        throw new Error("Nieprawidłowy format pliku");
+      }
+      state = nextState;
       saveState();
-      alert('Dane zaimportowane.');
+      render();
+      toast("Dane zaimportowane.");
     } catch (error) {
-      alert('Nie udało się zaimportować pliku JSON.');
+      toast(error.message || "Nie udało się zaimportować danych.");
     }
-  };
+  });
   reader.readAsText(file);
-  event.target.value = '';
 }
 
-function closeOnBackdrop(event, modalId) {
-  if (event.target.id === modalId) q(modalId).classList.remove('open');
+function refreshIcons() {
+  if (window.lucide) window.lucide.createIcons();
 }
 
-function seedIfEmpty() {
-  if (state.clients.length) return;
-  const anna = {
-    id: uid(),
-    firstName: 'Anna',
-    lastName: 'Kowalska',
-    gender: 'female',
-    phone: '500000000',
-    email: 'anna@example.com',
-    birthDate: '1982-05-20',
-    marketingConsent: true,
-    notes: 'Skóra sucha, preferuje kontakt przez WhatsApp.',
-    createdAt: new Date().toISOString()
-  };
-  const maciej = {
-    id: uid(),
-    firstName: 'Maciej',
-    lastName: 'Kaliszewski',
-    gender: 'male',
-    phone: '535530806',
-    email: '',
-    birthDate: '',
-    marketingConsent: false,
-    notes: 'Przykładowy klient do testu zwrotu Pan/Pani.',
-    createdAt: new Date().toISOString()
-  };
-  state.clients.push(anna, maciej);
-  state.treatments.push({
-    id: uid(),
-    clientId: anna.id,
-    treatmentName: 'Botoks',
-    treatmentDate: addDays(todayISO(), -120),
-    area: 'czoło',
-    productUsed: 'preparat A',
-    price: '900',
-    notes: 'Bez powikłań.',
-    createdAt: new Date().toISOString()
-  });
-  state.reminders.push({
-    id: uid(),
-    clientId: anna.id,
-    treatmentId: null,
-    remindAt: todayISO(),
-    reason: 'botoks — kolejna wizyta',
-    message: replaceVars(defaultTemplates()[0].content, anna, 'Botoks'),
-    status: 'pending',
-    createdAt: new Date().toISOString()
-  });
-  selectedClientId = anna.id;
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-}
+document.addEventListener("click", (event) => {
+  const target = event.target.closest("button");
+  if (!target) return;
 
-function runSmokeTest() {
-  const ok = typeof saveClient === 'function' && q('clientForm') && q('gender');
-  console.log(ok ? 'BeautyRecall CRM smoke test OK' : 'BeautyRecall CRM smoke test FAILED');
-}
-
-document.addEventListener('input', function (event) {
-  if (['treatmentName', 'treatmentDate'].includes(event.target.id) && q('reminderPreset') && q('reminderPreset').value) {
-    updateReminderDate();
+  if (target.dataset.view) switchView(target.dataset.view);
+  if (target.dataset.openModal) openModal(target.dataset.openModal);
+  if (target.dataset.closeModal !== undefined) closeModals();
+  if (target.dataset.selectClient) {
+    state.selectedClientId = target.dataset.selectClient;
+    renderClients();
+    refreshIcons();
+  }
+  if (target.dataset.deleteClient && confirm("Usunąć klienta oraz jego wizyty i przypomnienia?")) {
+    const id = target.dataset.deleteClient;
+    state.clients = state.clients.filter((client) => client.id !== id);
+    state.appointments = state.appointments.filter((appointment) => appointment.clientId !== id);
+    state.reminders = state.reminders.filter((reminder) => reminder.clientId !== id);
+    state.selectedClientId = state.clients[0]?.id || "";
+    saveState();
+    render();
+    toast("Klient usunięty.");
+  }
+  if (target.dataset.completeAppointment) {
+    const appointment = state.appointments.find((item) => item.id === target.dataset.completeAppointment);
+    if (appointment) appointment.status = "Zakończona";
+    saveState();
+    render();
+    toast("Wizyta oznaczona jako zakończona.");
+  }
+  if (target.dataset.deleteAppointment && confirm("Usunąć wizytę?")) {
+    state.appointments = state.appointments.filter((appointment) => appointment.id !== target.dataset.deleteAppointment);
+    saveState();
+    render();
+    toast("Wizyta usunięta.");
+  }
+  if (target.dataset.toggleReminder) {
+    const reminder = state.reminders.find((item) => item.id === target.dataset.toggleReminder);
+    if (reminder) reminder.done = !reminder.done;
+    saveState();
+    render();
+  }
+  if (target.dataset.deleteReminder && confirm("Usunąć przypomnienie?")) {
+    state.reminders = state.reminders.filter((reminder) => reminder.id !== target.dataset.deleteReminder);
+    saveState();
+    render();
+    toast("Przypomnienie usunięte.");
+  }
+  if (target.dataset.copyTemplate) {
+    navigator.clipboard.writeText(target.dataset.copyTemplate);
+    toast("Szablon skopiowany.");
   }
 });
 
-seedIfEmpty();
-renderAll();
-runSmokeTest();
+byId("globalSearch").addEventListener("input", (event) => {
+  searchTerm = event.target.value.trim();
+  render();
+});
+
+byId("quickAddButton").addEventListener("click", () => openModal("client"));
+byId("exportData").addEventListener("click", exportData);
+byId("importDataButton").addEventListener("click", () => byId("importData").click());
+byId("importData").addEventListener("change", (event) => importData(event.target.files[0]));
+byId("clientForm").addEventListener("submit", handleClientSubmit);
+byId("appointmentForm").addEventListener("submit", handleAppointmentSubmit);
+byId("reminderForm").addEventListener("submit", handleReminderSubmit);
+
+els("dialog").forEach((dialog) => {
+  dialog.addEventListener("click", (event) => {
+    if (event.target === dialog) dialog.close();
+  });
+});
+
+render();

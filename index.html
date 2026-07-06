@@ -3,24 +3,326 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>BeautyRecall CRM — live</title>
+  <title>BeautyRecall CRM</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="css/styles.css" />
 </head>
 <body>
-  <header>
-    <section class="hero">
-      <div class="brand">
-        <h1>BeautyRecall CRM</h1>
-        <p>Ładowanie wersji live z Supabase...</p>
+  <div class="app-shell">
+    <aside class="sidebar" aria-label="Główna nawigacja">
+      <div class="brand-block">
+        <div class="brand-mark" aria-hidden="true">BR</div>
+        <div>
+          <h1>BeautyRecall</h1>
+          <p>CRM dla salonu beauty</p>
+        </div>
       </div>
-    </section>
-  </header>
-  <main>
-    <div class="notice">Jeśli strona zatrzyma się na tym ekranie, odśwież ją przez Ctrl + F5.</div>
-  </main>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="js/supabase-config.js"></script>
-  <script src="js/live-supabase.js"></script>
-  <script src="js/no-password-demo.js"></script>
+
+      <nav class="nav-list" id="mainNav">
+        <button class="nav-item active" type="button" data-view="dashboard" aria-current="page">
+          <i data-lucide="layout-dashboard"></i>
+          <span>Pulpit</span>
+        </button>
+        <button class="nav-item" type="button" data-view="clients">
+          <i data-lucide="users"></i>
+          <span>Klienci</span>
+        </button>
+        <button class="nav-item" type="button" data-view="appointments">
+          <i data-lucide="calendar-days"></i>
+          <span>Wizyty</span>
+        </button>
+        <button class="nav-item" type="button" data-view="reminders">
+          <i data-lucide="bell-ring"></i>
+          <span>Przypomnienia</span>
+        </button>
+        <button class="nav-item" type="button" data-view="campaigns">
+          <i data-lucide="send"></i>
+          <span>Kampanie</span>
+        </button>
+      </nav>
+
+      <div class="sidebar-footer">
+        <p class="eyebrow">Status</p>
+        <strong id="storageStatus">Zapis lokalny</strong>
+        <span>Dane zostają w tej przeglądarce.</span>
+      </div>
+    </aside>
+
+    <main class="main-panel">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">Dzisiaj</p>
+          <h2 id="viewTitle">Pulpit salonu</h2>
+        </div>
+        <div class="topbar-actions">
+          <label class="search-field" for="globalSearch">
+            <i data-lucide="search"></i>
+            <input id="globalSearch" type="search" placeholder="Szukaj klienta, wizyty, usługi..." autocomplete="off" />
+          </label>
+          <button class="icon-button" id="exportData" type="button" aria-label="Eksportuj dane" title="Eksportuj dane">
+            <i data-lucide="download"></i>
+          </button>
+          <button class="icon-button" id="importDataButton" type="button" aria-label="Importuj dane" title="Importuj dane">
+            <i data-lucide="upload"></i>
+          </button>
+          <input class="hidden-input" id="importData" type="file" accept="application/json" />
+          <button class="primary-button" id="quickAddButton" type="button">
+            <i data-lucide="plus"></i>
+            <span>Nowy kontakt</span>
+          </button>
+        </div>
+      </header>
+
+      <section class="view active" id="dashboardView" data-title="Pulpit salonu">
+        <div class="metric-grid" id="metricGrid"></div>
+        <div class="content-grid">
+          <section class="panel wide-panel">
+            <div class="panel-header">
+              <div>
+                <p class="eyebrow">Plan dnia</p>
+                <h3>Nadchodzące wizyty</h3>
+              </div>
+              <button class="secondary-button" type="button" data-open-modal="appointment">
+                <i data-lucide="calendar-plus"></i>
+                <span>Dodaj wizytę</span>
+              </button>
+            </div>
+            <div class="timeline" id="todayTimeline"></div>
+          </section>
+
+          <section class="panel">
+            <div class="panel-header">
+              <div>
+                <p class="eyebrow">Uwaga</p>
+                <h3>Do kontaktu</h3>
+              </div>
+            </div>
+            <div class="stack-list" id="reminderStack"></div>
+          </section>
+        </div>
+      </section>
+
+      <section class="view" id="clientsView" data-title="Baza klientów">
+        <div class="section-toolbar">
+          <div>
+            <p class="eyebrow">Kontakty</p>
+            <h3>Klienci i preferencje</h3>
+          </div>
+          <button class="primary-button" type="button" data-open-modal="client">
+            <i data-lucide="user-plus"></i>
+            <span>Dodaj klienta</span>
+          </button>
+        </div>
+        <div class="client-layout">
+          <section class="panel">
+            <div class="stack-list client-list" id="clientList"></div>
+          </section>
+          <section class="panel" id="clientDetails"></section>
+        </div>
+      </section>
+
+      <section class="view" id="appointmentsView" data-title="Terminarz">
+        <div class="section-toolbar">
+          <div>
+            <p class="eyebrow">Kalendarz</p>
+            <h3>Wizyty i płatności</h3>
+          </div>
+          <button class="primary-button" type="button" data-open-modal="appointment">
+            <i data-lucide="calendar-plus"></i>
+            <span>Nowa wizyta</span>
+          </button>
+        </div>
+        <section class="panel table-panel">
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Termin</th>
+                  <th>Klient</th>
+                  <th>Usługa</th>
+                  <th>Status</th>
+                  <th>Kwota</th>
+                  <th>Akcje</th>
+                </tr>
+              </thead>
+              <tbody id="appointmentRows"></tbody>
+            </table>
+          </div>
+        </section>
+      </section>
+
+      <section class="view" id="remindersView" data-title="Przypomnienia">
+        <div class="section-toolbar">
+          <div>
+            <p class="eyebrow">Retencja</p>
+            <h3>Zadania po wizycie</h3>
+          </div>
+          <button class="primary-button" type="button" data-open-modal="reminder">
+            <i data-lucide="bell-plus"></i>
+            <span>Dodaj przypomnienie</span>
+          </button>
+        </div>
+        <section class="panel">
+          <div class="kanban" id="reminderBoard"></div>
+        </section>
+      </section>
+
+      <section class="view" id="campaignsView" data-title="Kampanie">
+        <div class="content-grid">
+          <section class="panel wide-panel">
+            <div class="panel-header">
+              <div>
+                <p class="eyebrow">Komunikacja</p>
+                <h3>Gotowe wiadomości</h3>
+              </div>
+            </div>
+            <div class="campaign-grid" id="campaignGrid"></div>
+          </section>
+          <section class="panel">
+            <p class="eyebrow">Segmenty</p>
+            <h3>Szybkie grupy</h3>
+            <div class="stack-list" id="segmentList"></div>
+          </section>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div class="toast-region" id="toastRegion" aria-live="polite" aria-atomic="true"></div>
+
+  <dialog class="modal" id="clientModal">
+    <form method="dialog" class="modal-card" id="clientForm">
+      <div class="modal-header">
+        <div>
+          <p class="eyebrow">Kontakt</p>
+          <h3>Nowy klient</h3>
+        </div>
+        <button class="icon-button" value="cancel" type="button" data-close-modal aria-label="Zamknij">
+          <i data-lucide="x"></i>
+        </button>
+      </div>
+      <div class="form-grid two">
+        <label>Imię i nazwisko
+          <input name="name" required placeholder="Anna Kowalska" />
+        </label>
+        <label>Telefon
+          <input name="phone" inputmode="tel" placeholder="500 000 000" />
+        </label>
+        <label>E-mail
+          <input name="email" type="email" placeholder="anna@email.pl" />
+        </label>
+        <label>Preferowany kontakt
+          <select name="channel">
+            <option>SMS</option>
+            <option>Telefon</option>
+            <option>E-mail</option>
+            <option>Instagram</option>
+          </select>
+        </label>
+        <label>Tagi
+          <input name="tags" placeholder="VIP, paznokcie, keratyna" />
+        </label>
+        <label>Urodziny
+          <input name="birthday" type="date" />
+        </label>
+      </div>
+      <label>Notatka
+        <textarea name="notes" placeholder="Preferencje, alergie, ulubiona stylistka..."></textarea>
+      </label>
+      <div class="modal-actions">
+        <button class="ghost-button" type="button" data-close-modal>Anuluj</button>
+        <button class="primary-button" type="submit">
+          <i data-lucide="save"></i>
+          <span>Zapisz klienta</span>
+        </button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog class="modal" id="appointmentModal">
+    <form method="dialog" class="modal-card" id="appointmentForm">
+      <div class="modal-header">
+        <div>
+          <p class="eyebrow">Terminarz</p>
+          <h3>Nowa wizyta</h3>
+        </div>
+        <button class="icon-button" value="cancel" type="button" data-close-modal aria-label="Zamknij">
+          <i data-lucide="x"></i>
+        </button>
+      </div>
+      <div class="form-grid two">
+        <label>Klient
+          <select name="clientId" id="appointmentClientSelect" required></select>
+        </label>
+        <label>Usługa
+          <input name="service" required placeholder="Manicure hybrydowy" />
+        </label>
+        <label>Data
+          <input name="date" type="date" required />
+        </label>
+        <label>Godzina
+          <input name="time" type="time" required />
+        </label>
+        <label>Status
+          <select name="status">
+            <option>Potwierdzona</option>
+            <option>Oczekuje</option>
+            <option>Zakończona</option>
+            <option>Anulowana</option>
+          </select>
+        </label>
+        <label>Kwota
+          <input name="price" type="number" min="0" step="10" placeholder="180" />
+        </label>
+      </div>
+      <label>Notatka
+        <textarea name="notes" placeholder="Kolor, produkty, szczegóły wizyty..."></textarea>
+      </label>
+      <div class="modal-actions">
+        <button class="ghost-button" type="button" data-close-modal>Anuluj</button>
+        <button class="primary-button" type="submit">
+          <i data-lucide="save"></i>
+          <span>Zapisz wizytę</span>
+        </button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog class="modal" id="reminderModal">
+    <form method="dialog" class="modal-card" id="reminderForm">
+      <div class="modal-header">
+        <div>
+          <p class="eyebrow">Follow-up</p>
+          <h3>Nowe przypomnienie</h3>
+        </div>
+        <button class="icon-button" value="cancel" type="button" data-close-modal aria-label="Zamknij">
+          <i data-lucide="x"></i>
+        </button>
+      </div>
+      <div class="form-grid two">
+        <label>Klient
+          <select name="clientId" id="reminderClientSelect" required></select>
+        </label>
+        <label>Termin
+          <input name="dueDate" type="date" required />
+        </label>
+      </div>
+      <label>Treść
+        <input name="text" required placeholder="Zaprosić na uzupełnienie za 3 tygodnie" />
+      </label>
+      <div class="modal-actions">
+        <button class="ghost-button" type="button" data-close-modal>Anuluj</button>
+        <button class="primary-button" type="submit">
+          <i data-lucide="save"></i>
+          <span>Zapisz przypomnienie</span>
+        </button>
+      </div>
+    </form>
+  </dialog>
+
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+  <script src="js/app.js"></script>
 </body>
 </html>
