@@ -5,13 +5,15 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>BeautyRecall CRM — demo</title>
   <link rel="stylesheet" href="css/styles.css" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/config.js"></script>
 </head>
 <body>
   <header>
     <section class="hero">
       <div class="brand">
         <h1>BeautyRecall CRM</h1>
-        <p>Prosty CRM dla gabinetu beauty: klientki, zabiegi, przypomnienia i gotowe wiadomości WhatsApp/SMS.</p>
+        <p>CRM dla gabinetu beauty: klientki, zabiegi, przypomnienia i gotowe wiadomości WhatsApp/SMS.</p>
       </div>
       <div class="hero-actions">
         <button onclick="openClientModal()">+ Dodaj klientkę</button>
@@ -24,24 +26,50 @@
 
   <main>
     <div class="notice">
-      To jest wersja demonstracyjna. Dane zapisują się tylko w tej przeglądarce przez localStorage. Do wersji produkcyjnej potrzebne są: logowanie, baza danych, RODO, szyfrowanie i kopie zapasowe.
+      Demo. Po ustawieniu Supabase dane zapisują się w bazie online po zalogowaniu. Bez konfiguracji działa tryb lokalny w tej przeglądarce.
     </div>
 
-    <section class="cards">
+    <section id="authPanel" class="panel auth-panel">
+      <div id="authMissing">
+        <h2>Tryb lokalny</h2>
+        <p class="panel-subtitle">Aplikacja działa bez bazy. Żeby włączyć logowanie i zapis online, uzupełnij plik <strong>js/config.js</strong> danymi z Supabase.</p>
+      </div>
+      <div id="authLoggedOut" style="display:none;">
+        <h2>Logowanie</h2>
+        <p class="panel-subtitle">Zaloguj się, żeby zapisywać dane w bazie.</p>
+        <div class="row two">
+          <div><label>E-mail</label><input id="authEmail" type="email" placeholder="email@example.com" /></div>
+          <div><label>Hasło</label><input id="authPassword" type="password" placeholder="minimum 6 znaków" /></div>
+        </div>
+        <div class="actions">
+          <button onclick="signIn()">Zaloguj</button>
+          <button class="secondary" onclick="signUp()">Utwórz konto</button>
+        </div>
+        <p id="authMessage" class="footer-note"></p>
+      </div>
+      <div id="authLoggedIn" style="display:none;">
+        <h2>Jesteś zalogowany</h2>
+        <p class="panel-subtitle">Konto: <strong id="authUserEmail"></strong></p>
+        <div class="actions"><button class="secondary" onclick="signOut()">Wyloguj</button></div>
+        <p id="syncStatus" class="footer-note"></p>
+      </div>
+    </section>
+
+    <section class="cards app-section">
       <div class="stat"><strong id="statClients">0</strong><span>klientek w bazie</span></div>
       <div class="stat"><strong id="statTreatments">0</strong><span>zabiegów zapisanych</span></div>
       <div class="stat"><strong id="statToday">0</strong><span>kontaktów na dziś</span></div>
       <div class="stat"><strong id="statPending">0</strong><span>aktywnych przypomnień</span></div>
     </section>
 
-    <div class="tabs">
+    <div class="tabs app-section">
       <button class="tab active" data-view="dashboard" onclick="setView('dashboard')">Dashboard</button>
       <button class="tab" data-view="clients" onclick="setView('clients')">Klientki</button>
       <button class="tab" data-view="reminders" onclick="setView('reminders')">Przypomnienia</button>
       <button class="tab" data-view="templates" onclick="setView('templates')">Szablony</button>
     </div>
 
-    <section id="view-dashboard" class="view active">
+    <section id="view-dashboard" class="view active app-section">
       <div class="grid">
         <aside class="panel">
           <h2>Klientki</h2>
@@ -53,7 +81,7 @@
       </div>
     </section>
 
-    <section id="view-clients" class="view">
+    <section id="view-clients" class="view app-section">
       <div class="panel">
         <h2>Lista klientek</h2>
         <p class="panel-subtitle">Prosta baza kontaktów gabinetu.</p>
@@ -61,7 +89,7 @@
       </div>
     </section>
 
-    <section id="view-reminders" class="view">
+    <section id="view-reminders" class="view app-section">
       <div class="panel">
         <h2>Przypomnienia</h2>
         <p class="panel-subtitle">Tu widać klientki, do których warto napisać.</p>
@@ -75,7 +103,7 @@
       </div>
     </section>
 
-    <section id="view-templates" class="view">
+    <section id="view-templates" class="view app-section">
       <div class="panel">
         <h2>Szablony wiadomości</h2>
         <p class="panel-subtitle">Możesz używać zmiennych: {imie}, {zabieg}, {data}, {gabinet}.</p>
@@ -87,7 +115,7 @@
       </div>
     </section>
 
-    <p class="footer-note">Demo: brak logowania, brak serwera, brak automatycznych SMS-ów. Dobre jako makieta do pokazania pierwszym gabinetom.</p>
+    <p class="footer-note app-section">Demo: brak automatycznych SMS-ów. Wersję produkcyjną trzeba jeszcze dopracować prawnie i bezpieczeństwa.</p>
   </main>
 
   <div id="clientModal" class="modal-backdrop" onclick="closeOnBackdrop(event, 'clientModal')">
