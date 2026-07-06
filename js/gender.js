@@ -1,14 +1,39 @@
 // Gender field + correct greeting for demo CRM.
 (function () {
+  const baseKey = 'beauty_recall_crm_v1';
+
   function q(id) { return document.getElementById(id); }
+
+  function readState() {
+    try { return JSON.parse(localStorage.getItem(baseKey) || '{}'); }
+    catch (e) { return {}; }
+  }
+
+  function writeState(data) {
+    localStorage.setItem(baseKey, JSON.stringify(data));
+  }
 
   function ensureGenderField() {
     if (q('gender')) return;
-    const row = document.querySelector('#clientForm .row.two');
-    if (!row) return;
+    const firstRow = document.querySelector('#clientForm .row.two');
+    if (!firstRow) return;
     const wrap = document.createElement('div');
     wrap.innerHTML = '<label>Płeć</label><select id="gender"><option value="female">Kobieta — Pani</option><option value="male">Mężczyzna — Pan</option></select>';
-    row.appendChild(wrap);
+    firstRow.appendChild(wrap);
+  }
+
+  function findClientByForm(data, oldId) {
+    if (!data || !Array.isArray(data.clients)) return null;
+    if (oldId) return data.clients.find(function (c) { return c.id === oldId; });
+    const firstName = (q('firstName') && q('firstName').value.trim()) || '';
+    const lastName = (q('lastName') && q('lastName').value.trim()) || '';
+    const phone = (q('phone') && q('phone').value.trim()) || '';
+    const email = (q('email') && q('email').value.trim()) || '';
+    for (let i = data.clients.length - 1; i >= 0; i--) {
+      const c = data.clients[i];
+      if ((c.firstName || '') === firstName && (c.lastName || '') === lastName && (c.phone || '') === phone && (c.email || '') === email) return c;
+    }
+    return data.clients[data.clients.length - 1] || null;
   }
 
   function titleFor(client) {
@@ -29,54 +54,51 @@
 
   const oldOpenClientModal = window.openClientModal;
   window.openClientModal = function (id) {
-    ensureGenderField();
     if (oldOpenClientModal) oldOpenClientModal(id);
     ensureGenderField();
-    const client = window.state && window.state.clients ? window.state.clients.find(function (c) { return c.id === id; }) : null;
-    const gender = q('gender');
-    if (gender) gender.value = client && client.gender ? client.gender : 'female';
+    const data = readState();
+    const client = data.clients && data.clients.find(function (c) { return c.id === id; });
+    if (q('gender')) q('gender').value = client && client.gender ? client.gender : 'female';
   };
 
+  const oldSaveClient = window.saveClient;
   window.saveClient = function (event) {
-    event.preventDefault();
     ensureGenderField();
-    const id = q('clientId').value;
-    const client = {
-      id: id || (crypto && crypto.randomUUID ? crypto.randomUUID() : String(Date.now() + Math.random())),
-      firstName: q('firstName').value.trim(),
-      lastName: q('lastName').value.trim(),
-      gender: q('gender') ? q('gender').value : 'female',
-      phone: q('phone').value.trim(),
-      email: q('email').value.trim(),
-      birthDate: q('birthDate').value,
-      marketingConsent: q('marketingConsent').value === 'true',
-      notes: q('notes').value.trim(),
-      createdAt: id ? ((window.state.clients.find(function (c) { return c.id === id; }) || {}).createdAt || new Date().toISOString()) : new Date().toISOString()
-    };
+    const oldId = q('clientId') ? q('clientId').value : '';
+    const chosenGender = q('gender') ? q('gender').value : 'female';
 
-    if (id) window.state.clients = window.state.clients.map(function (c) { return c.id === id ? client : c; });
-    else {
-      window.state.clients.push(client);
-      window.selectedClientId = client.id;
-    }
+    if (oldSaveClient) oldSaveClient(event);
 
-    if (window.closeClientModal) window.closeClientModal();
-    if (window.saveState) window.saveState();
+    setTimeout(function () {
+      const data = readState();
+      const client = findClientByForm(data, oldId);
+      if (client) {
+        client.gender = chosenGender;
+        writeState(data);
+      }
+      if (window.renderAll) window.renderAll();
+    }, 50);
   };
 
   const oldRenderClientDetails = window.renderClientDetails;
   window.renderClientDetails = function () {
     if (oldRenderClientDetails) oldRenderClientDetails();
-    const client = window.state && window.state.clients ? window.state.clients.find(function (c) { return c.id === window.selectedClientId; }) : null;
     const details = q('clientDetails');
-    if (!client || !details || details.querySelector('[data-gender-pill]')) return;
-    const title = titleFor(client);
+    if (!details || details.querySelector('[data-gender-pill]')) return;
+    const nameEl = details.querySelector('h2');
+    if (!nameEl) return;
+    const shownName = nameEl.textContent.trim();
+    const data = readState();
+    const client = data.clients && data.clients.find(function (c) {
+      return ((c.firstName || '') + ' ' + (c.lastName || '')).trim() === shownName;
+    });
+    if (!client) return;
     const target = details.querySelector('.pill');
     if (!target) return;
     const pill = document.createElement('span');
     pill.className = 'pill';
     pill.setAttribute('data-gender-pill', '1');
-    pill.textContent = 'zwrot: ' + title;
+    pill.textContent = 'zwrot: ' + titleFor(client);
     target.parentNode.insertBefore(pill, target.nextSibling);
   };
 
