@@ -104,7 +104,7 @@
     <section id="view-templates" class="view app-section">
       <div class="panel">
         <h2>Szablony wiadomości</h2>
-        <p class="panel-subtitle">Możesz używać zmiennych: {imie}, {zabieg}, {data}, {gabinet}.</p>
+        <p class="panel-subtitle">Możesz używać zmiennych: {zwrot}, {imie}, {zabieg}, {data}, {gabinet}.</p>
         <div id="templatesList"></div>
         <div class="actions">
           <button onclick="openTemplateModal()">+ Dodaj szablon</button>
@@ -119,14 +119,15 @@
   <div id="clientModal" class="modal-backdrop" onclick="closeOnBackdrop(event, 'clientModal')">
     <div class="modal">
       <div class="modal-header">
-        <div><h2 id="clientModalTitle">Dodaj klientkę</h2><p class="panel-subtitle">Wpisz dane kontaktowe i notatki.</p></div>
+        <div><h2 id="clientModalTitle">Dodaj klientkę/klienta</h2><p class="panel-subtitle">Wpisz dane kontaktowe i notatki.</p></div>
         <button class="ghost small" onclick="closeClientModal()">Zamknij</button>
       </div>
       <form id="clientForm" onsubmit="saveClient(event)">
         <input type="hidden" id="clientId" />
-        <div class="row two">
+        <div class="row three">
           <div><label>Imię *</label><input id="firstName" required placeholder="Anna" /></div>
           <div><label>Nazwisko</label><input id="lastName" placeholder="Kowalska" /></div>
+          <div><label>Płeć</label><select id="gender"><option value="female">Kobieta — Pani</option><option value="male">Mężczyzna — Pan</option></select></div>
         </div>
         <div class="row two">
           <div><label>Telefon</label><input id="phone" placeholder="500000000" /></div>
@@ -186,7 +187,7 @@
 
   <div id="templateModal" class="modal-backdrop" onclick="closeOnBackdrop(event, 'templateModal')">
     <div class="modal">
-      <div class="modal-header"><div><h2 id="templateModalTitle">Dodaj szablon</h2><p class="panel-subtitle">Zmienne: {imie}, {zabieg}, {data}, {gabinet}.</p></div><button class="ghost small" onclick="closeTemplateModal()">Zamknij</button></div>
+      <div class="modal-header"><div><h2 id="templateModalTitle">Dodaj szablon</h2><p class="panel-subtitle">Zmienne: {zwrot}, {imie}, {zabieg}, {data}, {gabinet}.</p></div><button class="ghost small" onclick="closeTemplateModal()">Zamknij</button></div>
       <form id="templateForm" onsubmit="saveTemplate(event)">
         <input type="hidden" id="templateId" />
         <label>Nazwa *</label><input id="templateName" required />
@@ -198,6 +199,5 @@
 
   <script src="js/config.js"></script>
   <script src="js/app.js"></script>
-  <script src="js/gender.js"></script>
 </body>
 </html>
