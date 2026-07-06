@@ -277,6 +277,12 @@ button svg,
   color: var(--danger);
 }
 
+button:disabled,
+button.disabled {
+  cursor: not-allowed;
+  opacity: 0.52;
+}
+
 .hidden-input {
   display: none;
 }
@@ -475,6 +481,58 @@ button svg,
   font-size: 12px;
 }
 
+.contact-panel {
+  display: grid;
+  gap: 12px;
+  margin-top: 18px;
+  padding-top: 18px;
+  border-top: 1px solid var(--border);
+}
+
+.compact-header {
+  align-items: flex-start;
+}
+
+.contact-actions,
+.campaign-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.contact-fields {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) auto;
+  align-items: end;
+  gap: 10px;
+}
+
+.contact-button {
+  min-height: 44px;
+  padding: 0 12px;
+  border: 1px solid #bfdbfe;
+  border-radius: var(--radius);
+  background: #eff6ff;
+  color: var(--primary);
+  font-weight: 800;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: background var(--transition), border-color var(--transition), color var(--transition);
+}
+
+.contact-button:hover:not(:disabled) {
+  border-color: #93c5fd;
+  background: #dbeafe;
+}
+
+.contact-note {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
 .stack-item {
   padding: 12px;
   border: 1px solid var(--border);
@@ -565,6 +623,10 @@ td {
   margin-top: 10px;
 }
 
+.campaign-actions {
+  margin-top: 10px;
+}
+
 label {
   display: grid;
   gap: 7px;
@@ -625,6 +687,10 @@ textarea {
 
 .form-grid.two {
   grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.form-span {
+  grid-column: 1 / -1;
 }
 
 .modal-actions {
@@ -738,6 +804,7 @@ textarea {
   .metric-grid,
   .content-grid,
   .client-layout,
+  .contact-fields,
   .kanban,
   .campaign-grid {
     grid-template-columns: 1fr;
@@ -766,7 +833,8 @@ textarea {
 
   .primary-button,
   .secondary-button,
-  .ghost-button {
+  .ghost-button,
+  .contact-button {
     width: 100%;
   }
 

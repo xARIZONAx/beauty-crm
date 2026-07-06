@@ -15,6 +15,7 @@ const defaultState = {
       name: "Anna Kowalska",
       phone: "501 122 334",
       email: "anna.kowalska@email.pl",
+      instagram: "anna.beauty",
       channel: "SMS",
       tags: ["VIP", "manicure", "hybryda"],
       birthday: "1992-06-18",
@@ -26,6 +27,7 @@ const defaultState = {
       name: "Marta Zielińska",
       phone: "603 400 900",
       email: "marta.zielinska@email.pl",
+      instagram: "marta.hair",
       channel: "Telefon",
       tags: ["koloryzacja", "keratyna"],
       birthday: "1988-11-04",
@@ -37,6 +39,7 @@ const defaultState = {
       name: "Julia Nowak",
       phone: "730 808 120",
       email: "julia.nowak@email.pl",
+      instagram: "julia.brows",
       channel: "Instagram",
       tags: ["brwi", "laminacja"],
       birthday: "1999-03-21",
@@ -110,6 +113,7 @@ const els = (selector) => [...document.querySelectorAll(selector)];
 const byId = (id) => document.getElementById(id);
 const uid = (prefix) => `${prefix}${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}`;
 const money = (value) => `${Number(value || 0).toLocaleString("pl-PL")} zł`;
+const defaultMessage = "Cześć {imię}, przypominamy o wizycie w BeautyRecall. Daj znać, czy termin nadal pasuje.";
 
 function loadState() {
   try {
@@ -147,6 +151,56 @@ function getClientName(clientId) {
   return getClient(clientId)?.name || "Nieznany klient";
 }
 
+function firstName(client) {
+  return (client?.name || "").trim().split(/\s+/)[0] || "tam";
+}
+
+function cleanPhone(phone) {
+  const digits = String(phone || "").replace(/\D/g, "");
+  if (!digits) return "";
+  if (digits.length === 9) return `48${digits}`;
+  if (digits.startsWith("00")) return digits.slice(2);
+  return digits;
+}
+
+function cleanInstagram(value) {
+  return String(value || "").trim().replace(/^@/, "");
+}
+
+function messageForClient(message, client) {
+  return String(message || defaultMessage)
+    .replaceAll("{imię}", firstName(client))
+    .replaceAll("{imie}", firstName(client))
+    .replaceAll("{name}", firstName(client));
+}
+
+function contactUrl(client, channel, message) {
+  const phone = cleanPhone(client.phone);
+  const text = encodeURIComponent(messageForClient(message, client));
+  if (channel === "call") return phone ? `tel:+${phone}` : "";
+  if (channel === "sms") return phone ? `sms:+${phone}?&body=${text}` : "";
+  if (channel === "whatsapp") return phone ? `https://wa.me/${phone}?text=${text}` : "";
+  if (channel === "email") {
+    if (!client.email) return "";
+    return `mailto:${encodeURIComponent(client.email)}?subject=${encodeURIComponent("BeautyRecall")}&body=${text}`;
+  }
+  if (channel === "instagram") {
+    const username = cleanInstagram(client.instagram);
+    return username ? `https://ig.me/m/${encodeURIComponent(username)}` : "";
+  }
+  return "";
+}
+
+function contactLabel(channel) {
+  return {
+    call: "numeru telefonu",
+    sms: "numeru telefonu",
+    whatsapp: "numeru telefonu",
+    email: "adresu e-mail",
+    instagram: "nazwy użytkownika Instagram"
+  }[channel] || "danych kontaktowych";
+}
+
 function filteredClients() {
   if (!searchTerm) return state.clients;
   const term = searchTerm.toLowerCase();
@@ -155,7 +209,7 @@ function filteredClients() {
       .filter((appointment) => appointment.clientId === client.id)
       .map((appointment) => appointment.service)
       .join(" ");
-    return [client.name, client.phone, client.email, client.channel, client.notes, client.tags.join(" "), appointmentText]
+    return [client.name, client.phone, client.email, client.instagram, client.channel, client.notes, client.tags.join(" "), appointmentText]
       .join(" ")
       .toLowerCase()
       .includes(term);
@@ -274,7 +328,7 @@ function renderClients() {
     ? clients.map((client) => `
         <button class="client-card ${client.id === state.selectedClientId ? "active" : ""}" type="button" data-select-client="${client.id}">
           <strong>${escapeHtml(client.name)}</strong>
-          <span class="muted">${escapeHtml(client.phone || "brak telefonu")} · ${escapeHtml(client.channel)}</span>
+          <span class="muted">${escapeHtml(client.phone || "brak telefonu")} · ${escapeHtml(client.channel)}${client.instagram ? ` · @${escapeHtml(cleanInstagram(client.instagram))}` : ""}</span>
           <div class="tag-row">${client.tags.map((tag) => `<span class="tag-chip">${escapeHtml(tag)}</span>`).join("")}</div>
         </button>
       `).join("")
@@ -308,6 +362,7 @@ function renderClientDetails() {
     <div class="detail-grid">
       <div class="detail-cell"><span>Telefon</span><strong>${escapeHtml(client.phone || "brak")}</strong></div>
       <div class="detail-cell"><span>E-mail</span><strong>${escapeHtml(client.email || "brak")}</strong></div>
+      <div class="detail-cell"><span>Instagram</span><strong>${client.instagram ? `@${escapeHtml(cleanInstagram(client.instagram))}` : "brak"}</strong></div>
       <div class="detail-cell"><span>Kontakt</span><strong>${escapeHtml(client.channel)}</strong></div>
       <div class="detail-cell"><span>Przychód</span><strong>${money(revenue)}</strong></div>
       <div class="detail-cell"><span>Ostatnia wizyta</span><strong>${lastVisit ? formatDate(lastVisit.date) : "brak"}</strong></div>
@@ -315,6 +370,48 @@ function renderClientDetails() {
     </div>
     <p class="muted">${escapeHtml(client.notes || "Brak notatki.")}</p>
     <div class="tag-row">${client.tags.map((tag) => `<span class="tag-chip">${escapeHtml(tag)}</span>`).join("")}</div>
+    <section class="contact-panel" aria-label="Komunikacja z klientem">
+      <div class="panel-header compact-header">
+        <div>
+          <p class="eyebrow">Komunikacja</p>
+          <h3>Wyślij wiadomość</h3>
+        </div>
+      </div>
+      <div class="contact-fields">
+        <label>Telefon
+          <input data-contact-input="phone" value="${escapeHtml(client.phone || "")}" placeholder="500 000 000" inputmode="tel" />
+        </label>
+        <label>E-mail
+          <input data-contact-input="email" value="${escapeHtml(client.email || "")}" placeholder="anna@email.pl" type="email" />
+        </label>
+        <label>Instagram
+          <input data-contact-input="instagram" value="${escapeHtml(cleanInstagram(client.instagram))}" placeholder="nazwa_uzytkownika" />
+        </label>
+        <button class="secondary-button" type="button" data-save-contact="${client.id}">
+          <i data-lucide="save"></i>
+          <span>Zapisz kanały</span>
+        </button>
+      </div>
+      <textarea id="messageComposer" data-client-message="${client.id}">${escapeHtml(defaultMessage)}</textarea>
+      <div class="contact-actions">
+        ${contactButton(client, "call", "phone-call", "Zadzwoń")}
+        ${contactButton(client, "sms", "message-square", "SMS")}
+        ${contactButton(client, "whatsapp", "send", "WhatsApp")}
+        ${contactButton(client, "email", "mail", "E-mail")}
+        ${contactButton(client, "instagram", "instagram", "Instagram")}
+      </div>
+      <p class="contact-note">WhatsApp i SMS otwierają aplikację z gotową treścią. Instagram otwiera czat/profil klienta, bo przeglądarka nie pozwala pewnie wysłać treści automatycznie.</p>
+    </section>
+  `;
+}
+
+function contactButton(client, channel, icon, label, message = "") {
+  const disabled = !contactUrl(client, channel, message || defaultMessage);
+  return `
+    <button class="contact-button ${disabled ? "disabled" : ""}" type="button" data-contact-channel="${channel}" data-contact-client="${client.id}" ${disabled ? "disabled" : ""}>
+      <i data-lucide="${icon}"></i>
+      <span>${escapeHtml(label)}</span>
+    </button>
   `;
 }
 
@@ -330,6 +427,12 @@ function renderAppointments() {
           <td>${money(appointment.price)}</td>
           <td>
             <div class="row-actions">
+              <button class="icon-button" type="button" data-contact-channel="whatsapp" data-contact-client="${appointment.clientId}" data-contact-message="Cześć {imię}, przypominamy o wizycie ${escapeHtml(appointment.date)} o ${escapeHtml(appointment.time)}: ${escapeHtml(appointment.service)}." aria-label="Wyślij WhatsApp">
+                <i data-lucide="send"></i>
+              </button>
+              <button class="icon-button" type="button" data-contact-channel="call" data-contact-client="${appointment.clientId}" aria-label="Zadzwoń">
+                <i data-lucide="phone-call"></i>
+              </button>
               <button class="icon-button" type="button" data-complete-appointment="${appointment.id}" aria-label="Oznacz jako zakończoną">
                 <i data-lucide="check"></i>
               </button>
@@ -380,6 +483,7 @@ function renderReminderBoard() {
 }
 
 function renderCampaigns() {
+  const selectedClient = getClient(state.selectedClientId) || state.clients[0];
   const segments = [
     ["VIP", state.clients.filter((client) => client.tags.some((tag) => tag.toLowerCase() === "vip")).length],
     ["Bez kolejnej wizyty", state.clients.filter((client) => !state.appointments.some((appointment) => appointment.clientId === client.id && appointment.date >= iso(0))).length],
@@ -409,10 +513,26 @@ function renderCampaigns() {
     <article class="campaign-card">
       <strong>${escapeHtml(template.title)}</strong>
       <textarea readonly>${escapeHtml(template.text)}</textarea>
-      <button class="secondary-button" type="button" data-copy-template="${escapeHtml(template.text)}">
-        <i data-lucide="copy"></i>
-        <span>Kopiuj</span>
-      </button>
+      <div class="campaign-actions">
+        <button class="secondary-button" type="button" data-copy-template="${escapeHtml(template.text)}">
+          <i data-lucide="copy"></i>
+          <span>Kopiuj</span>
+        </button>
+        ${selectedClient ? `
+          <button class="contact-button" type="button" data-contact-channel="whatsapp" data-contact-client="${selectedClient.id}" data-contact-message="${escapeHtml(template.text)}">
+            <i data-lucide="send"></i>
+            <span>WhatsApp</span>
+          </button>
+          <button class="contact-button" type="button" data-contact-channel="sms" data-contact-client="${selectedClient.id}" data-contact-message="${escapeHtml(template.text)}">
+            <i data-lucide="message-square"></i>
+            <span>SMS</span>
+          </button>
+          <button class="contact-button" type="button" data-contact-channel="email" data-contact-client="${selectedClient.id}" data-contact-message="${escapeHtml(template.text)}">
+            <i data-lucide="mail"></i>
+            <span>E-mail</span>
+          </button>
+        ` : ""}
+      </div>
     </article>
   `).join("");
 
@@ -476,6 +596,7 @@ function handleClientSubmit(event) {
     name: data.name.trim(),
     phone: data.phone.trim(),
     email: data.email.trim(),
+    instagram: cleanInstagram(data.instagram),
     channel: data.channel,
     tags: data.tags.split(",").map((tag) => tag.trim()).filter(Boolean),
     birthday: data.birthday,
@@ -566,6 +687,32 @@ function refreshIcons() {
   if (window.lucide) window.lucide.createIcons();
 }
 
+function openContact(clientId, channel, messageOverride = "") {
+  const client = getClient(clientId);
+  if (!client) {
+    toast("Najpierw wybierz klienta.");
+    return;
+  }
+
+  const composer = byId("messageComposer");
+  const composerMessage = composer && composer.dataset.clientMessage === client.id ? composer.value : "";
+  const message = messageOverride || composerMessage || defaultMessage;
+  const url = contactUrl(client, channel, message);
+
+  if (!url) {
+    toast(`Brakuje ${contactLabel(channel)} u klienta.`);
+    return;
+  }
+
+  window.open(url, "_blank", "noopener");
+  if (channel === "instagram") {
+    navigator.clipboard?.writeText(messageForClient(message, client)).catch(() => {});
+    toast("Otwieram Instagram. Treść skopiowana do schowka.");
+    return;
+  }
+  toast("Otwieram aplikację do kontaktu.");
+}
+
 document.addEventListener("click", (event) => {
   const target = event.target.closest("button");
   if (!target) return;
@@ -573,6 +720,20 @@ document.addEventListener("click", (event) => {
   if (target.dataset.view) switchView(target.dataset.view);
   if (target.dataset.openModal) openModal(target.dataset.openModal);
   if (target.dataset.closeModal !== undefined) closeModals();
+  if (target.dataset.contactChannel) {
+    openContact(target.dataset.contactClient, target.dataset.contactChannel, target.dataset.contactMessage || "");
+  }
+  if (target.dataset.saveContact) {
+    const client = getClient(target.dataset.saveContact);
+    if (client) {
+      client.phone = document.querySelector('[data-contact-input="phone"]')?.value.trim() || "";
+      client.email = document.querySelector('[data-contact-input="email"]')?.value.trim() || "";
+      client.instagram = cleanInstagram(document.querySelector('[data-contact-input="instagram"]')?.value || "");
+      saveState();
+      render();
+      toast("Kanały kontaktu zapisane.");
+    }
+  }
   if (target.dataset.selectClient) {
     state.selectedClientId = target.dataset.selectClient;
     renderClients();
