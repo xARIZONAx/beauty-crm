@@ -11,198 +11,159 @@
     <section class="hero">
       <div class="brand">
         <h1>BeautyRecall CRM</h1>
-        <p>CRM dla gabinetu beauty: klientki, zabiegi, przypomnienia i gotowe wiadomości WhatsApp/SMS.</p>
+        <p>CRM dla gabinetu beauty: klientki, zabiegi, przypomnienia, kampanie, SMS, kalendarz i zgody.</p>
       </div>
       <div class="hero-actions">
-        <button onclick="openClientModal()">+ Dodaj klientkę</button>
-        <button class="secondary" onclick="exportData()">Eksport danych</button>
-        <label class="button secondary" for="importFile">Import danych</label>
-        <input id="importFile" type="file" accept="application/json" style="display:none" onchange="importData(event)" />
+        <button onclick="showDemoAlert('Dodawanie klientki działa w pełnej wersji CRM.')">+ Dodaj klientkę</button>
+        <button class="secondary" onclick="showDemoAlert('Eksport danych demo.')">Eksport danych</button>
+        <button class="secondary" onclick="showDemoAlert('Import danych demo.')">Import danych</button>
       </div>
     </section>
   </header>
 
   <main>
-    <div class="notice">
-      Demo. Dane zapisują się w demo-bazie w przeglądarce osobno dla każdego e-maila. To pokaz funkcji, nie wersja produkcyjna.
-    </div>
-
-    <section id="authPanel" class="panel auth-panel">
-      <div id="authMissing">
-        <h2>Logowanie demo</h2>
-        <p class="panel-subtitle">Wpisz dowolny e-mail, żeby wejść do osobnej bazy demo.</p>
-      </div>
-      <div id="authLoggedOut" style="display:none;">
-        <h2>Logowanie demo</h2>
-        <p class="panel-subtitle">Wpisz dowolny e-mail. Dane będą zapisane osobno dla tego e-maila w tej przeglądarce.</p>
-        <div class="row two">
-          <div><label>E-mail</label><input id="authEmail" type="email" placeholder="email@example.com" /></div>
-          <div><label>Hasło demo</label><input id="authPassword" type="password" placeholder="opcjonalne w demo" /></div>
-        </div>
-        <div class="actions">
-          <button onclick="signIn()">Zaloguj</button>
-          <button class="secondary" onclick="signUp()">Utwórz konto demo</button>
-        </div>
-        <p id="authMessage" class="footer-note"></p>
-      </div>
-      <div id="authLoggedIn" style="display:none;">
-        <h2>Jesteś zalogowany</h2>
-        <p class="panel-subtitle">Konto demo: <strong id="authUserEmail"></strong></p>
-        <div class="actions"><button class="secondary" onclick="signOut()">Wyloguj</button></div>
-        <p id="syncStatus" class="footer-note"></p>
-      </div>
-    </section>
+    <div class="notice">Demo produktowe. Dane poniżej są przykładowe, żeby pokazać klientowi, jak działa CRM.</div>
 
     <section class="cards app-section">
-      <div class="stat"><strong id="statClients">0</strong><span>klientek w bazie</span></div>
-      <div class="stat"><strong id="statTreatments">0</strong><span>zabiegów zapisanych</span></div>
-      <div class="stat"><strong id="statToday">0</strong><span>kontaktów na dziś</span></div>
-      <div class="stat"><strong id="statPending">0</strong><span>aktywnych przypomnień</span></div>
+      <div class="stat"><strong>4</strong><span>klientek w bazie</span></div>
+      <div class="stat"><strong>5</strong><span>zabiegów zapisanych</span></div>
+      <div class="stat"><strong>2</strong><span>kontaktów na dziś</span></div>
+      <div class="stat"><strong>4</strong><span>aktywnych przypomnień</span></div>
     </section>
 
     <div class="tabs app-section">
-      <button class="tab active" data-view="dashboard" onclick="setView('dashboard')">Dashboard</button>
-      <button class="tab" data-view="clients" onclick="setView('clients')">Klientki</button>
-      <button class="tab" data-view="reminders" onclick="setView('reminders')">Przypomnienia</button>
-      <button class="tab" data-view="templates" onclick="setView('templates')">Szablony</button>
+      <button class="tab active" data-view="dashboard" onclick="setStaticView('dashboard')">Dashboard</button>
+      <button class="tab" data-view="clients" onclick="setStaticView('clients')">Klientki</button>
+      <button class="tab" data-view="reminders" onclick="setStaticView('reminders')">Przypomnienia</button>
+      <button class="tab" data-view="campaigns" onclick="setStaticView('campaigns')">Kampanie</button>
+      <button class="tab" data-view="sms" onclick="setStaticView('sms')">SMS demo</button>
+      <button class="tab" data-view="contact-status" onclick="setStaticView('contact-status')">Status kontaktu</button>
+      <button class="tab" data-view="calendar" onclick="setStaticView('calendar')">Kalendarz</button>
+      <button class="tab" data-view="consents" onclick="setStaticView('consents')">Zgody/RODO</button>
     </div>
 
     <section id="view-dashboard" class="view active app-section">
       <div class="grid">
         <aside class="panel">
           <h2>Klientki</h2>
-          <p class="panel-subtitle">Kliknij klientkę, żeby zobaczyć kartę, zabiegi i przypomnienia.</p>
-          <input class="search" id="clientSearch" placeholder="Szukaj po imieniu, telefonie, e-mailu..." oninput="renderAll()" />
-          <div id="clientList" class="client-list"></div>
+          <p class="panel-subtitle">Podgląd bazy i statusów.</p>
+          <div class="client-list">
+            <button class="client-item active"><strong>Anna Kowalska</strong><br><span class="muted">500000000</span><br><span class="pill">Botoks</span><span class="pill green">dziś</span></button>
+            <button class="client-item"><strong>Ewa Nowak</strong><br><span class="muted">600000000</span><br><span class="pill">Mezoterapia</span><span class="pill green">odpisała</span></button>
+            <button class="client-item"><strong>Maciej Kaliszewski</strong><br><span class="muted">535530806</span><br><span class="pill">Peeling</span><span class="pill red">brak odpowiedzi</span></button>
+          </div>
         </aside>
-        <section class="panel"><div id="clientDetails"></div></section>
+        <section class="panel">
+          <h2>Anna Kowalska</h2>
+          <div class="muted">500000000 · anna@example.com</div>
+          <span class="pill">zwrot: Pani</span><span class="pill green">marketing: zgoda</span>
+          <h3 style="margin-top:18px">Historia zabiegów</h3>
+          <table><thead><tr><th>Data</th><th>Zabieg</th><th>Preparat</th><th>Cena</th></tr></thead><tbody><tr><td>08.03.2026</td><td>Botoks</td><td>preparat A</td><td>900 zł</td></tr></tbody></table>
+          <h3 style="margin-top:18px">Gotowa wiadomość</h3>
+          <div class="message-box">Pani Anno, minęły 4 miesiące od ostatniego zabiegu. Czy zaproponować dogodny termin?</div>
+        </section>
       </div>
     </section>
 
     <section id="view-clients" class="view app-section">
       <div class="panel">
         <h2>Lista klientek</h2>
-        <p class="panel-subtitle">Prosta baza kontaktów gabinetu.</p>
-        <div id="clientsTable"></div>
+        <table><thead><tr><th>Kontakt</th><th>Telefon</th><th>Ostatni zabieg</th><th>Następny kontakt</th></tr></thead><tbody>
+          <tr><td>Anna Kowalska</td><td>500000000</td><td>Botoks</td><td>dziś</td></tr>
+          <tr><td>Ewa Nowak</td><td>600000000</td><td>Mezoterapia</td><td>dziś</td></tr>
+          <tr><td>Maciej Kaliszewski</td><td>535530806</td><td>Peeling</td><td>jutro</td></tr>
+          <tr><td>Ola Wiśniewska</td><td>511222333</td><td>Laser</td><td>za 2 dni</td></tr>
+        </tbody></table>
       </div>
     </section>
 
     <section id="view-reminders" class="view app-section">
       <div class="panel">
         <h2>Przypomnienia</h2>
-        <p class="panel-subtitle">Tu widać klientki, do których warto napisać.</p>
-        <div class="actions">
-          <button class="secondary small" onclick="setReminderFilter('all')">Wszystkie</button>
-          <button class="secondary small" onclick="setReminderFilter('today')">Na dziś i zaległe</button>
-          <button class="secondary small" onclick="setReminderFilter('pending')">Aktywne</button>
-          <button class="secondary small" onclick="setReminderFilter('done')">Zrobione</button>
-        </div>
-        <div id="remindersTable" style="margin-top:12px;"></div>
+        <table><thead><tr><th>Data</th><th>Kontakt</th><th>Powód</th><th>Akcje</th></tr></thead><tbody>
+          <tr><td>dziś</td><td>Anna Kowalska</td><td>Botoks — kolejna wizyta</td><td><button class="small" onclick="showDemoAlert('WhatsApp z gotową wiadomością')">WhatsApp</button></td></tr>
+          <tr><td>dziś</td><td>Ewa Nowak</td><td>Mezoterapia — kolejny zabieg</td><td><button class="small" onclick="showDemoAlert('Wiadomość skopiowana')">Kopiuj</button></td></tr>
+        </tbody></table>
       </div>
     </section>
 
-    <section id="view-templates" class="view app-section">
+    <section id="view-campaigns" class="view app-section">
       <div class="panel">
-        <h2>Szablony wiadomości</h2>
-        <p class="panel-subtitle">Możesz używać zmiennych: {zwrot}, {imie}, {zabieg}, {data}, {gabinet}.</p>
-        <div id="templatesList"></div>
-        <div class="actions">
-          <button onclick="openTemplateModal()">+ Dodaj szablon</button>
-          <button class="secondary" onclick="resetTemplates()">Przywróć domyślne</button>
-        </div>
+        <h2>Kampanie odzyskiwania klientek</h2>
+        <p class="panel-subtitle">Widok sprzedażowy: kogo odzyskać i ile pieniędzy może wrócić do salonu.</p>
+        <section class="cards"><div class="stat"><strong>4</strong><span>kontakty w kampanii</span></div><div class="stat"><strong>2 750 zł</strong><span>szacowany potencjał</span></div><div class="stat"><strong>3</strong><span>gotowe wiadomości</span></div></section>
+        <table style="margin-top:14px"><thead><tr><th>Kontakt</th><th>Powód</th><th>Wiadomość</th><th>Akcja</th></tr></thead><tbody>
+          <tr><td>Anna Kowalska</td><td>Botoks 4 miesiące</td><td><div class="message-box">Pani Anno, minęły 4 miesiące od zabiegu. Czy zaproponować termin?</div></td><td><button class="small" onclick="showDemoAlert('WhatsApp otwarty')">WhatsApp</button></td></tr>
+          <tr><td>Maciej Kaliszewski</td><td>Kontrola po peelingu</td><td><div class="message-box">Panie Macieju, przypominamy o kontroli po peelingu.</div></td><td><button class="small" onclick="showDemoAlert('Dodano do SMS demo')">SMS demo</button></td></tr>
+        </tbody></table>
+      </div>
+    </section>
+
+    <section id="view-sms" class="view app-section">
+      <div class="panel">
+        <h2>SMS demo</h2>
+        <p class="panel-subtitle">Na komputerze widać kolejkę. Na telefonie można otworzyć aplikację SMS.</p>
+        <section class="cards"><div class="stat"><strong>2</strong><span>SMS w kolejce</span></div><div class="stat"><strong>1</strong><span>wysłany demo</span></div></section>
+        <table style="margin-top:14px"><thead><tr><th>Status</th><th>Kontakt</th><th>Treść</th><th>Akcja</th></tr></thead><tbody>
+          <tr><td><span class="pill">w kolejce</span></td><td>Anna Kowalska</td><td>Pani Anno, minęły 4 miesiące od zabiegu.</td><td><button class="small" onclick="openDemoSms('500000000','Pani Anno, minęły 4 miesiące od zabiegu.')">SMS app</button></td></tr>
+          <tr><td><span class="pill green">wysłany demo</span></td><td>Ewa Nowak</td><td>Pani Ewo, przypominamy o mezoterapii.</td><td><button class="secondary small" onclick="showDemoAlert('Status: wysłany demo')">Szczegóły</button></td></tr>
+        </tbody></table>
+      </div>
+    </section>
+
+    <section id="view-contact-status" class="view app-section">
+      <div class="panel">
+        <h2>Status kontaktu</h2>
+        <p class="panel-subtitle">Pipeline po wiadomości: wysłano, odpowiedź, umówiona, brak odpowiedzi.</p>
+        <section class="cards"><div class="stat"><strong>2</strong><span>rozmowy w toku</span></div><div class="stat"><strong>1</strong><span>ciepła odpowiedź</span></div><div class="stat"><strong>1</strong><span>umówiona wizyta</span></div></section>
+        <table style="margin-top:14px"><thead><tr><th>Kontakt</th><th>Wiadomość</th><th>Status</th><th>Akcja</th></tr></thead><tbody>
+          <tr><td>Anna Kowalska</td><td>Botoks — kolejna wizyta</td><td><span class="pill">wysłano</span></td><td><button class="small" onclick="showDemoAlert('Follow-up ustawiony')">Follow-up</button></td></tr>
+          <tr><td>Ewa Nowak</td><td>Mezoterapia — seria</td><td><span class="pill green">odpisała</span></td><td><button class="small" onclick="showDemoAlert('Dodano wizytę do kalendarza')">Umówiona</button></td></tr>
+          <tr><td>Maciej Kaliszewski</td><td>Kontrola po peelingu</td><td><span class="pill red">brak odpowiedzi</span></td><td><button class="small" onclick="showDemoAlert('Ponowienie ustawione')">Ponów</button></td></tr>
+        </tbody></table>
+      </div>
+    </section>
+
+    <section id="view-calendar" class="view app-section">
+      <div class="panel">
+        <h2>Kalendarz wizyt</h2>
+        <p class="panel-subtitle">Mini-plan wizyt salonu: termin, kontakt, zabieg, wartość i status.</p>
+        <div class="actions"><button onclick="showDemoAlert('Dodano przypomnienia do wizyt na jutro')">Przypomnienia na jutro</button><button class="secondary" onclick="showDemoAlert('Kampania dla odwołanych wizyt utworzona')">Odzyskaj odwołane</button></div>
+        <section class="cards"><div class="stat"><strong>3</strong><span>zaplanowane</span></div><div class="stat"><strong>1</strong><span>wizyta dziś</span></div><div class="stat"><strong>2 100 zł</strong><span>wartość zaplanowana</span></div></section>
+        <table style="margin-top:14px"><thead><tr><th>Termin</th><th>Kontakt</th><th>Zabieg</th><th>Wartość</th><th>Status</th></tr></thead><tbody>
+          <tr><td>Dzisiaj 12:00</td><td>Anna Kowalska</td><td>Botoks</td><td>900 zł</td><td><span class="pill">zaplanowana</span></td></tr>
+          <tr><td>Jutro 15:30</td><td>Ewa Nowak</td><td>Mezoterapia</td><td>500 zł</td><td><span class="pill">do potwierdzenia</span></td></tr>
+          <tr><td>Za 2 dni 10:00</td><td>Maciej Kaliszewski</td><td>Kontrola</td><td>0 zł</td><td><span class="pill">zaplanowana</span></td></tr>
+          <tr><td>Wczoraj 17:00</td><td>Ola Wiśniewska</td><td>Laser</td><td>700 zł</td><td><span class="pill green">odbyta</span></td></tr>
+        </tbody></table>
+      </div>
+    </section>
+
+    <section id="view-consents" class="view app-section">
+      <div class="panel">
+        <h2>Zgody/RODO</h2>
+        <p class="panel-subtitle">Rejestr zgód kontaktowych i generator treści do podpisu. To demo, finalną treść powinien sprawdzić prawnik.</p>
+        <section class="cards"><div class="stat"><strong>4</strong><span>klauzule przekazane</span></div><div class="stat"><strong>3</strong><span>zgody kontaktowe</span></div><div class="stat"><strong>1</strong><span>zgoda zdjęcia</span></div></section>
+        <div class="row two" style="margin-top:14px"><div><label>Kontakt</label><select id="consentDemoClient"><option>Anna Kowalska</option><option>Ewa Nowak</option><option>Maciej Kaliszewski</option><option>Ola Wiśniewska</option></select></div><div><label>Nazwa gabinetu</label><input id="consentDemoClinic" placeholder="Beauty Clinic" /></div></div>
+        <div class="actions"><button onclick="generateDemoConsent()">Generuj zgodę</button><button class="secondary" onclick="copyDemoConsent()">Kopiuj</button></div>
+        <textarea id="consentDemoText" style="margin-top:12px;min-height:150px" placeholder="Tu pojawi się zgoda..."></textarea>
+        <table style="margin-top:14px"><thead><tr><th>Kontakt</th><th>RODO</th><th>SMS</th><th>WhatsApp</th><th>E-mail</th><th>Zdjęcia</th></tr></thead><tbody>
+          <tr><td>Anna Kowalska</td><td><span class="pill green">tak</span></td><td><span class="pill green">tak</span></td><td><span class="pill green">tak</span></td><td><span class="pill green">tak</span></td><td><span class="pill red">nie</span></td></tr>
+          <tr><td>Ewa Nowak</td><td><span class="pill green">tak</span></td><td><span class="pill red">nie</span></td><td><span class="pill green">tak</span></td><td><span class="pill red">nie</span></td><td><span class="pill red">nie</span></td></tr>
+          <tr><td>Maciej Kaliszewski</td><td><span class="pill green">tak</span></td><td><span class="pill green">tak</span></td><td><span class="pill green">tak</span></td><td><span class="pill red">nie</span></td><td><span class="pill red">nie</span></td></tr>
+        </tbody></table>
       </div>
     </section>
 
     <p class="footer-note app-section">Demo: SMS-y są symulowane. Wersję produkcyjną trzeba podpiąć pod operatora SMS, backend, RODO i kopie zapasowe.</p>
   </main>
 
-  <div id="clientModal" class="modal-backdrop" onclick="closeOnBackdrop(event, 'clientModal')">
-    <div class="modal">
-      <div class="modal-header">
-        <div><h2 id="clientModalTitle">Dodaj klientkę/klienta</h2><p class="panel-subtitle">Wpisz dane kontaktowe i notatki.</p></div>
-        <button class="ghost small" onclick="closeClientModal()">Zamknij</button>
-      </div>
-      <form id="clientForm" onsubmit="saveClient(event)">
-        <input type="hidden" id="clientId" />
-        <div class="row three">
-          <div><label>Imię *</label><input id="firstName" required placeholder="Anna" /></div>
-          <div><label>Nazwisko</label><input id="lastName" placeholder="Kowalska" /></div>
-          <div><label>Płeć</label><select id="gender"><option value="female">Kobieta — Pani</option><option value="male">Mężczyzna — Pan</option></select></div>
-        </div>
-        <div class="row two">
-          <div><label>Telefon</label><input id="phone" placeholder="500000000" /></div>
-          <div><label>E-mail</label><input id="email" type="email" placeholder="anna@email.pl" /></div>
-        </div>
-        <div class="row two">
-          <div><label>Data urodzenia</label><input id="birthDate" type="date" /></div>
-          <div><label>Zgoda marketingowa</label><select id="marketingConsent"><option value="false">Nie</option><option value="true">Tak</option></select></div>
-        </div>
-        <label>Notatki</label><textarea id="notes" placeholder="np. preferuje kontakt WhatsApp"></textarea>
-        <div class="actions"><button type="submit">Zapisz</button><button type="button" class="secondary" onclick="closeClientModal()">Anuluj</button></div>
-      </form>
-    </div>
-  </div>
-
-  <div id="treatmentModal" class="modal-backdrop" onclick="closeOnBackdrop(event, 'treatmentModal')">
-    <div class="modal">
-      <div class="modal-header">
-        <div><h2>Dodaj zabieg</h2><p class="panel-subtitle">Po zapisaniu możesz od razu utworzyć przypomnienie.</p></div>
-        <button class="ghost small" onclick="closeTreatmentModal()">Zamknij</button>
-      </div>
-      <form id="treatmentForm" onsubmit="saveTreatment(event)">
-        <input type="hidden" id="treatmentClientId" />
-        <div class="row two">
-          <div><label>Zabieg *</label><input id="treatmentName" required placeholder="Botoks / mezoterapia / peeling" /></div>
-          <div><label>Data zabiegu *</label><input id="treatmentDate" type="date" required /></div>
-        </div>
-        <div class="row three">
-          <div><label>Okolica</label><input id="area" placeholder="twarz / czoło / szyja" /></div>
-          <div><label>Preparat</label><input id="productUsed" placeholder="nazwa preparatu" /></div>
-          <div><label>Cena</label><input id="price" type="number" min="0" step="1" placeholder="900" /></div>
-        </div>
-        <label>Notatka po zabiegu</label><textarea id="treatmentNotes"></textarea>
-        <h3 style="margin-top:18px;">Przypomnienie</h3>
-        <div class="row two">
-          <div><label>Kiedy przypomnieć?</label><select id="reminderPreset" onchange="updateReminderDate()"><option value="">Nie twórz</option><option value="7">Kontrola za 7 dni</option><option value="14">Kontrola za 14 dni</option><option value="30">Kolejna wizyta za 30 dni</option><option value="90">Za 3 miesiące</option><option value="120">Za 4 miesiące</option><option value="180">Za 6 miesięcy</option><option value="custom">Własna data</option></select></div>
-          <div><label>Data przypomnienia</label><input id="reminderDate" type="date" /></div>
-        </div>
-        <label>Powód przypomnienia</label><input id="reminderReason" placeholder="np. kolejna mezoterapia" />
-        <label>Wiadomość</label><textarea id="reminderMessage"></textarea>
-        <div class="actions"><button type="submit">Zapisz zabieg</button><button type="button" class="secondary" onclick="closeTreatmentModal()">Anuluj</button></div>
-      </form>
-    </div>
-  </div>
-
-  <div id="reminderModal" class="modal-backdrop" onclick="closeOnBackdrop(event, 'reminderModal')">
-    <div class="modal">
-      <div class="modal-header"><div><h2>Dodaj przypomnienie</h2><p class="panel-subtitle">Przypomnienie pojawi się na liście kontaktów.</p></div><button class="ghost small" onclick="closeReminderModal()">Zamknij</button></div>
-      <form id="manualReminderForm" onsubmit="saveManualReminder(event)">
-        <input type="hidden" id="manualReminderClientId" />
-        <div class="row two"><div><label>Data *</label><input id="manualReminderDate" type="date" required /></div><div><label>Powód *</label><input id="manualReminderReason" required /></div></div>
-        <label>Wiadomość</label><textarea id="manualReminderMessage"></textarea>
-        <div class="actions"><button type="submit">Zapisz</button><button type="button" class="secondary" onclick="closeReminderModal()">Anuluj</button></div>
-      </form>
-    </div>
-  </div>
-
-  <div id="templateModal" class="modal-backdrop" onclick="closeOnBackdrop(event, 'templateModal')">
-    <div class="modal">
-      <div class="modal-header"><div><h2 id="templateModalTitle">Dodaj szablon</h2><p class="panel-subtitle">Zmienne: {zwrot}, {imie}, {zabieg}, {data}, {gabinet}.</p></div><button class="ghost small" onclick="closeTemplateModal()">Zamknij</button></div>
-      <form id="templateForm" onsubmit="saveTemplate(event)">
-        <input type="hidden" id="templateId" />
-        <label>Nazwa *</label><input id="templateName" required />
-        <label>Treść *</label><textarea id="templateContent" required></textarea>
-        <div class="actions"><button type="submit">Zapisz</button><button type="button" class="secondary" onclick="closeTemplateModal()">Anuluj</button></div>
-      </form>
-    </div>
-  </div>
-
-  <script src="js/config.js"></script>
-  <script src="js/app.js"></script>
-  <script src="js/advanced.js"></script>
-  <script src="js/polish-fix.js"></script>
-  <script src="js/operations.js"></script>
-  <script src="js/client-ready.js"></script>
-  <script src="js/demo-fill.js"></script>
+  <script>
+    function setStaticView(view){document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));document.getElementById('view-'+view).classList.add('active');document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t.dataset.view===view));}
+    function showDemoAlert(text){alert(text);}
+    function openDemoSms(phone,text){if(!/Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent)){alert('SMS działa tylko na telefonie. Na komputerze to podgląd kolejki.');return;} window.location.href='sms:+48'+phone+'?body='+encodeURIComponent(text);}
+    function generateDemoConsent(){const c=document.getElementById('consentDemoClient').value;const clinic=document.getElementById('consentDemoClinic').value||'Beauty Clinic';document.getElementById('consentDemoText').value='ZGODA I INFORMACJA RODO\n\nGabinet: '+clinic+'\nKlient/klientka: '+c+'\n\nPotwierdzam przekazanie informacji o przetwarzaniu danych osobowych oraz wybór zgód kontaktowych.\n\nPodpis: ................................';}
+    function copyDemoConsent(){const t=document.getElementById('consentDemoText').value;if(!t){alert('Najpierw wygeneruj zgodę');return;}navigator.clipboard.writeText(t).then(()=>alert('Zgoda skopiowana'));}
+  </script>
 </body>
 </html>
