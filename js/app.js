@@ -656,9 +656,7 @@ function openContact(clientId, channel, messageOverride = "") {
     return;
   }
 
-  const composer = byId("messageComposer");
-  const composerMessage = composer && composer.dataset.clientMessage === client.id ? composer.value : "";
-  const message = messageOverride || composerMessage || defaultMessage;
+  const message = messageOverride || defaultMessage;
   const url = contactUrl(client, channel, message);
 
   if (!url) {
