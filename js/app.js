@@ -314,7 +314,22 @@ function reminderCard(reminder) {
         <span class="tag-chip">${formatDate(reminder.dueDate)}</span>
         ${overdue ? `<span class="tag-chip">Po terminie</span>` : ""}
       </div>
+      ${reminderContactActions(reminder)}
     </article>
+  `;
+}
+
+function reminderContactActions(reminder) {
+  const client = getClient(reminder.clientId);
+  if (!client) return "";
+  return `
+    <div class="reminder-actions" aria-label="Kontakt do przypomnienia">
+      ${contactButton(client, "whatsapp", "send", "WhatsApp", reminder.text)}
+      ${contactButton(client, "sms", "message-square", "SMS", reminder.text)}
+      ${contactButton(client, "call", "phone-call", "Dzwoń", reminder.text)}
+      ${contactButton(client, "email", "mail", "E-mail", reminder.text)}
+      ${contactButton(client, "instagram", "instagram", "IG", reminder.text)}
+    </div>
   `;
 }
 
@@ -407,8 +422,9 @@ function renderClientDetails() {
 
 function contactButton(client, channel, icon, label, message = "") {
   const disabled = !contactUrl(client, channel, message || defaultMessage);
+  const messageAttribute = message ? ` data-contact-message="${escapeHtml(message)}"` : "";
   return `
-    <button class="contact-button ${disabled ? "disabled" : ""}" type="button" data-contact-channel="${channel}" data-contact-client="${client.id}" ${disabled ? "disabled" : ""}>
+    <button class="contact-button ${disabled ? "disabled" : ""}" type="button" data-contact-channel="${channel}" data-contact-client="${client.id}"${messageAttribute} ${disabled ? "disabled" : ""}>
       <i data-lucide="${icon}"></i>
       <span>${escapeHtml(label)}</span>
     </button>
@@ -467,6 +483,7 @@ function renderReminderBoard() {
                 <span class="tag-chip">${formatDate(reminder.dueDate)}</span>
               </div>
               <div class="row-actions">
+                ${reminderContactActions(reminder)}
                 <button class="icon-button" type="button" data-toggle-reminder="${reminder.id}" aria-label="Zmień status przypomnienia">
                   <i data-lucide="${reminder.done ? "rotate-ccw" : "check"}"></i>
                 </button>
@@ -483,7 +500,6 @@ function renderReminderBoard() {
 }
 
 function renderCampaigns() {
-  const selectedClient = getClient(state.selectedClientId) || state.clients[0];
   const segments = [
     ["VIP", state.clients.filter((client) => client.tags.some((tag) => tag.toLowerCase() === "vip")).length],
     ["Bez kolejnej wizyty", state.clients.filter((client) => !state.appointments.some((appointment) => appointment.clientId === client.id && appointment.date >= iso(0))).length],
@@ -518,20 +534,6 @@ function renderCampaigns() {
           <i data-lucide="copy"></i>
           <span>Kopiuj</span>
         </button>
-        ${selectedClient ? `
-          <button class="contact-button" type="button" data-contact-channel="whatsapp" data-contact-client="${selectedClient.id}" data-contact-message="${escapeHtml(template.text)}">
-            <i data-lucide="send"></i>
-            <span>WhatsApp</span>
-          </button>
-          <button class="contact-button" type="button" data-contact-channel="sms" data-contact-client="${selectedClient.id}" data-contact-message="${escapeHtml(template.text)}">
-            <i data-lucide="message-square"></i>
-            <span>SMS</span>
-          </button>
-          <button class="contact-button" type="button" data-contact-channel="email" data-contact-client="${selectedClient.id}" data-contact-message="${escapeHtml(template.text)}">
-            <i data-lucide="mail"></i>
-            <span>E-mail</span>
-          </button>
-        ` : ""}
       </div>
     </article>
   `).join("");

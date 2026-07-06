@@ -494,10 +494,15 @@ button.disabled {
 }
 
 .contact-actions,
-.campaign-actions {
+.campaign-actions,
+.reminder-actions {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+}
+
+.reminder-actions {
+  margin-top: 10px;
 }
 
 .contact-fields {
