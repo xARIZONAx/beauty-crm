@@ -5,8 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>BeautyRecall CRM — demo</title>
   <link rel="stylesheet" href="css/styles.css" />
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="js/config.js"></script>
 </head>
 <body>
   <header>
@@ -26,30 +24,30 @@
 
   <main>
     <div class="notice">
-      Demo. Po ustawieniu Supabase dane zapisują się w bazie online po zalogowaniu. Bez konfiguracji działa tryb lokalny w tej przeglądarce.
+      Demo. Dane zapisują się w demo-bazie w przeglądarce osobno dla każdego e-maila. To pokaz funkcji, nie wersja produkcyjna.
     </div>
 
     <section id="authPanel" class="panel auth-panel">
       <div id="authMissing">
-        <h2>Tryb lokalny</h2>
-        <p class="panel-subtitle">Aplikacja działa bez bazy. Żeby włączyć logowanie i zapis online, uzupełnij plik <strong>js/config.js</strong> danymi z Supabase.</p>
+        <h2>Logowanie demo</h2>
+        <p class="panel-subtitle">Wpisz dowolny e-mail, żeby wejść do osobnej bazy demo.</p>
       </div>
       <div id="authLoggedOut" style="display:none;">
-        <h2>Logowanie</h2>
-        <p class="panel-subtitle">Zaloguj się, żeby zapisywać dane w bazie.</p>
+        <h2>Logowanie demo</h2>
+        <p class="panel-subtitle">Wpisz dowolny e-mail. Dane będą zapisane osobno dla tego e-maila w tej przeglądarce.</p>
         <div class="row two">
           <div><label>E-mail</label><input id="authEmail" type="email" placeholder="email@example.com" /></div>
-          <div><label>Hasło</label><input id="authPassword" type="password" placeholder="minimum 6 znaków" /></div>
+          <div><label>Hasło demo</label><input id="authPassword" type="password" placeholder="opcjonalne w demo" /></div>
         </div>
         <div class="actions">
           <button onclick="signIn()">Zaloguj</button>
-          <button class="secondary" onclick="signUp()">Utwórz konto</button>
+          <button class="secondary" onclick="signUp()">Utwórz konto demo</button>
         </div>
         <p id="authMessage" class="footer-note"></p>
       </div>
       <div id="authLoggedIn" style="display:none;">
         <h2>Jesteś zalogowany</h2>
-        <p class="panel-subtitle">Konto: <strong id="authUserEmail"></strong></p>
+        <p class="panel-subtitle">Konto demo: <strong id="authUserEmail"></strong></p>
         <div class="actions"><button class="secondary" onclick="signOut()">Wyloguj</button></div>
         <p id="syncStatus" class="footer-note"></p>
       </div>
@@ -198,6 +196,7 @@
     </div>
   </div>
 
+  <script src="js/config.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>
