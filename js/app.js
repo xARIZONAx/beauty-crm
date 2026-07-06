@@ -388,8 +388,8 @@ function renderClientDetails() {
     <section class="contact-panel" aria-label="Komunikacja z klientem">
       <div class="panel-header compact-header">
         <div>
-          <p class="eyebrow">Komunikacja</p>
-          <h3>Wyślij wiadomość</h3>
+          <p class="eyebrow">Kontakt</p>
+          <h3>Kanały klienta</h3>
         </div>
       </div>
       <div class="contact-fields">
@@ -407,15 +407,6 @@ function renderClientDetails() {
           <span>Zapisz kanały</span>
         </button>
       </div>
-      <textarea id="messageComposer" data-client-message="${client.id}">${escapeHtml(defaultMessage)}</textarea>
-      <div class="contact-actions">
-        ${contactButton(client, "call", "phone-call", "Zadzwoń")}
-        ${contactButton(client, "sms", "message-square", "SMS")}
-        ${contactButton(client, "whatsapp", "send", "WhatsApp")}
-        ${contactButton(client, "email", "mail", "E-mail")}
-        ${contactButton(client, "instagram", "instagram", "Instagram")}
-      </div>
-      <p class="contact-note">WhatsApp i SMS otwierają aplikację z gotową treścią. Instagram otwiera czat/profil klienta, bo przeglądarka nie pozwala pewnie wysłać treści automatycznie.</p>
     </section>
   `;
 }
@@ -443,12 +434,6 @@ function renderAppointments() {
           <td>${money(appointment.price)}</td>
           <td>
             <div class="row-actions">
-              <button class="icon-button" type="button" data-contact-channel="whatsapp" data-contact-client="${appointment.clientId}" data-contact-message="Cześć {imię}, przypominamy o wizycie ${escapeHtml(appointment.date)} o ${escapeHtml(appointment.time)}: ${escapeHtml(appointment.service)}." aria-label="Wyślij WhatsApp">
-                <i data-lucide="send"></i>
-              </button>
-              <button class="icon-button" type="button" data-contact-channel="call" data-contact-client="${appointment.clientId}" aria-label="Zadzwoń">
-                <i data-lucide="phone-call"></i>
-              </button>
               <button class="icon-button" type="button" data-complete-appointment="${appointment.id}" aria-label="Oznacz jako zakończoną">
                 <i data-lucide="check"></i>
               </button>
@@ -506,44 +491,19 @@ function renderCampaigns() {
     ["Urodziny w bazie", state.clients.filter((client) => client.birthday).length]
   ];
 
-  const templates = [
-    {
-      title: "Przypomnienie o wizycie",
-      text: "Cześć {imię}, przypominamy o wizycie w BeautyRecall. Jeśli chcesz zmienić termin, daj nam znać."
-    },
-    {
-      title: "Follow-up po usłudze",
-      text: "Cześć {imię}, jak efekt po ostatniej wizycie? Mamy dla Ciebie rekomendację pielęgnacji i wolny termin na kontrolę."
-    },
-    {
-      title: "Powrót po przerwie",
-      text: "Cześć {imię}, dawno Cię u nas nie było. Przygotowaliśmy kilka nowych terminów i mały bonus przy kolejnej rezerwacji."
-    },
-    {
-      title: "Urodzinowa wiadomość",
-      text: "Cześć {imię}, wszystkiego pięknego z okazji urodzin. Czeka na Ciebie urodzinowy rabat w salonie BeautyRecall."
-    }
-  ];
-
-  byId("campaignGrid").innerHTML = templates.map((template) => `
+  byId("campaignGrid").innerHTML = segments.map(([name, count]) => `
     <article class="campaign-card">
-      <strong>${escapeHtml(template.title)}</strong>
-      <textarea readonly>${escapeHtml(template.text)}</textarea>
-      <div class="campaign-actions">
-        <button class="secondary-button" type="button" data-copy-template="${escapeHtml(template.text)}">
-          <i data-lucide="copy"></i>
-          <span>Kopiuj</span>
-        </button>
-      </div>
-    </article>
-  `).join("");
-
-  byId("segmentList").innerHTML = segments.map(([name, count]) => `
-    <article class="stack-item">
       <strong>${escapeHtml(name)}</strong>
       <span class="muted">${count} kontaktów</span>
     </article>
   `).join("");
+
+  byId("segmentList").innerHTML = `
+    <article class="stack-item">
+      <strong>Wysyłka jest w przypomnieniach</strong>
+      <span class="muted">Kanały kontaktu są dostępne tylko przy zadaniach follow-up.</span>
+    </article>
+  `;
 }
 
 function renderSelectOptions() {
