@@ -8,6 +8,7 @@ Statyczny CRM dla salonu beauty, gotowy do hostowania na GitHub Pages.
 - terminarz wizyt z kwotami i statusami,
 - przypomnienia follow-up po wizycie,
 - gotowe szablony wiadomości do kampanii,
+- klikalne segmenty kampanii z listą klientów,
 - bezpośrednie akcje kontaktu w przypomnieniach: WhatsApp, SMS, telefon, e-mail i Instagram,
 - globalne wyszukiwanie,
 - eksport i import danych JSON,

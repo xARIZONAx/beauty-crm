@@ -615,9 +615,44 @@ td {
   padding: 14px;
 }
 
+.segment-card {
+  width: 100%;
+  min-height: 80px;
+  color: var(--text);
+  text-align: left;
+}
+
+.segment-card:hover,
+.segment-card.active {
+  border-color: #93c5fd;
+  background: #f8fbff;
+}
+
+.segment-card.active {
+  box-shadow: 0 0 0 3px rgba(29, 78, 216, 0.12), var(--shadow-soft);
+}
+
 .campaign-card textarea {
   min-height: 118px;
   margin-top: 10px;
+}
+
+.segment-header {
+  display: grid;
+  gap: 2px;
+}
+
+.segment-client-list {
+  margin: 12px 0;
+}
+
+.segment-client-card {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: #fbfdff;
 }
 
 label {

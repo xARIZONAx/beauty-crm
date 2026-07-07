@@ -106,6 +106,7 @@ const defaultState = {
 
 let state = loadState();
 let activeView = "dashboard";
+let activeCampaignSegment = "vip";
 let searchTerm = "";
 
 const el = (selector) => document.querySelector(selector);
@@ -485,23 +486,68 @@ function renderReminderBoard() {
 }
 
 function renderCampaigns() {
-  const segments = [
-    ["VIP", state.clients.filter((client) => client.tags.some((tag) => tag.toLowerCase() === "vip")).length],
-    ["Bez kolejnej wizyty", state.clients.filter((client) => !state.appointments.some((appointment) => appointment.clientId === client.id && appointment.date >= iso(0))).length],
-    ["Urodziny w bazie", state.clients.filter((client) => client.birthday).length]
-  ];
+  const segments = campaignSegments();
+  const activeSegment = segments.find((segment) => segment.id === activeCampaignSegment) || segments[0];
+  activeCampaignSegment = activeSegment.id;
 
-  byId("campaignGrid").innerHTML = segments.map(([name, count]) => `
-    <article class="campaign-card">
-      <strong>${escapeHtml(name)}</strong>
-      <span class="muted">${count} kontaktów</span>
-    </article>
+  byId("campaignGrid").innerHTML = segments.map((segment) => `
+    <button class="campaign-card segment-card ${segment.id === activeCampaignSegment ? "active" : ""}" type="button" data-campaign-segment="${segment.id}" aria-pressed="${segment.id === activeCampaignSegment}">
+      <strong>${escapeHtml(segment.name)}</strong>
+      <span class="muted">${segment.clients.length} kontaktów</span>
+    </button>
   `).join("");
 
   byId("segmentList").innerHTML = `
+    <div class="segment-header">
+      <p class="eyebrow">Lista</p>
+      <h3>${escapeHtml(activeSegment.name)}</h3>
+      <span class="muted">${activeSegment.clients.length} kontaktów w segmencie</span>
+    </div>
+    <div class="stack-list segment-client-list">
+      ${activeSegment.clients.length ? activeSegment.clients.map((client) => segmentClientCard(client)).join("") : `<div class="empty-state">Brak klientów w tym segmencie.</div>`}
+    </div>
     <article class="stack-item">
       <strong>Wysyłka jest w przypomnieniach</strong>
       <span class="muted">Kanały kontaktu są dostępne tylko przy zadaniach follow-up.</span>
+    </article>
+  `;
+}
+
+function campaignSegments() {
+  const hasFutureAppointment = (client) => state.appointments.some((appointment) =>
+    appointment.clientId === client.id && appointment.status !== "Anulowana" && appointment.date >= iso(0)
+  );
+
+  return [
+    {
+      id: "vip",
+      name: "VIP",
+      clients: state.clients.filter((client) => client.tags.some((tag) => tag.toLowerCase() === "vip"))
+    },
+    {
+      id: "no-next-visit",
+      name: "Bez kolejnej wizyty",
+      clients: state.clients.filter((client) => !hasFutureAppointment(client))
+    },
+    {
+      id: "birthdays",
+      name: "Urodziny w bazie",
+      clients: state.clients.filter((client) => client.birthday)
+    }
+  ];
+}
+
+function segmentClientCard(client) {
+  return `
+    <article class="segment-client-card">
+      <div>
+        <strong>${escapeHtml(client.name)}</strong>
+        <span class="muted">${escapeHtml(client.phone || "brak telefonu")} · ${escapeHtml(client.email || "brak e-maila")}</span>
+        ${client.instagram ? `<span class="muted">@${escapeHtml(cleanInstagram(client.instagram))}</span>` : ""}
+      </div>
+      <div class="tag-row">
+        ${client.tags.map((tag) => `<span class="tag-chip">${escapeHtml(tag)}</span>`).join("")}
+      </div>
     </article>
   `;
 }
@@ -682,6 +728,11 @@ document.addEventListener("click", (event) => {
   if (target.dataset.closeModal !== undefined) closeModals();
   if (target.dataset.contactChannel) {
     openContact(target.dataset.contactClient, target.dataset.contactChannel, target.dataset.contactMessage || "");
+  }
+  if (target.dataset.campaignSegment) {
+    activeCampaignSegment = target.dataset.campaignSegment;
+    renderCampaigns();
+    refreshIcons();
   }
   if (target.dataset.saveContact) {
     const client = getClient(target.dataset.saveContact);
